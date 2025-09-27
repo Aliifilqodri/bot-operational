@@ -6,6 +6,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const excel = require('exceljs');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
+const PQueue = require('p-queue').default;
 
 // Import routes auth
 const authRoutes = require('./routes/auth');
@@ -67,10 +68,46 @@ const CASE_KEYWORDS = {
   'Alista - PIC Controller': ['pic controler', 'pic kontroler']
 };
 
-// ===== Telegram Bot =====
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
-bot.on('polling_error', err => console.error('❌ Polling Error:', err.code));
+// ===== Telegram Bot + Queue =====
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
+  polling: { interval: 500, autoStart: true }
+});
+bot.on('polling_error', err => console.error('❌ Polling Error:', err && err.code));
 console.log('🤖 Bot Telegram berjalan...');
+
+// Global queue to protect Telegram API from bursts
+const queue = new PQueue({ interval: 1000, intervalCap: 20 }); // max ~20 actions per second
+
+// helper to add tiny jitter inside queue to smooth spikes
+function queuedCall(fn) {
+  return queue.add(() => {
+    const jitter = Math.floor(Math.random() * 200); // 0-200ms jitter
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        fn().then(resolve).catch(reject);
+      }, jitter);
+    });
+  });
+}
+
+function sendMessage(chatId, text, options = {}) {
+  return queuedCall(() => bot.sendMessage(chatId, text, options));
+}
+function sendPhoto(chatId, photo, options = {}) {
+  return queuedCall(() => bot.sendPhoto(chatId, photo, options));
+}
+
+// ===== Rate Limit Per User (5 detik) =====
+const userCooldown = new Map(); // userId -> lastTimestamp
+const COOLDOWN_MS = 5000; // 5 seconds
+
+function canSendTicket(userId) {
+  const now = Date.now();
+  const last = userCooldown.get(userId) || 0;
+  if (now - last < COOLDOWN_MS) return false;
+  userCooldown.set(userId, now);
+  return true;
+}
 
 // ===== Fungsi generate kode tiket =====
 async function generateTicketCode() {
@@ -113,14 +150,23 @@ bot.on('message', async msg => {
   const telegramUserId = msg.from.id;
   const chatType = msg.chat.type;
   const groupName = chatType === 'private' ? 'Private Chat' : msg.chat.title;
-  const textRaw = msg.caption || msg.text || "";
+  const textRaw = (msg.caption || msg.text || "").toString();
 
   if (textRaw.toLowerCase().includes('#kendala')) {
+    // rate-limit per user
+    if (!canSendTicket(telegramUserId)) {
+      return sendMessage(chatId, '⚠️ Tunggu 5 detik sebelum mengirim kendala lagi ya.', { reply_to_message_id: messageId });
+    }
+
     try {
       let photoUrl = null;
       if (msg.photo) {
         const bestPhoto = msg.photo[msg.photo.length - 1];
-        photoUrl = await bot.getFileLink(bestPhoto.file_id);
+        try {
+          photoUrl = await bot.getFileLink(bestPhoto.file_id);
+        } catch (e) {
+          console.warn('⚠️ Gagal ambil file link:', e && e.message);
+        }
       }
 
       const extractedText = textRaw.split(/#kendala/i)[1]?.trim() || (msg.photo ? "(gambar terlampir)" : "(tidak ada deskripsi)");
@@ -140,26 +186,32 @@ bot.on('message', async msg => {
 
       await newTicket.save();
 
-      await bot.sendMessage(chatId,
-        `✅ <b>Tiket Diterima!</b>\n\nTerima kasih, laporan Anda dicatat dengan kode:\n<code>${ticketCode}</code>\n\nGunakan <code>#lacak ${ticketCode}</code> untuk cek status.`, { parse_mode: 'HTML', reply_to_message_id: messageId }
+      await sendMessage(chatId,
+        `✅ <b>Tiket Diterima!</b>\n\nTerima kasih, laporan Anda dicatat dengan kode:\n<code>${ticketCode}</code>\n\nGunakan <code>#lacak ${ticketCode}</code> untuk cek status.`,
+        { parse_mode: 'HTML', reply_to_message_id: messageId }
       );
 
       console.log('===== NEW TICKET =====', { ticketCode, chatId, usernameRaw, extractedText, photoUrl });
     } catch (err) {
       console.error('❌ Gagal mencatat tiket:', err);
-      bot.sendMessage(chatId, `❌ Terjadi kesalahan sistem saat mencatat kendala Anda.\nError: ${err.message}`, { reply_to_message_id: messageId });
+      await sendMessage(chatId, `❌ Terjadi kesalahan sistem saat mencatat kendala Anda.\nError: ${err.message}`, { reply_to_message_id: messageId });
     }
   }
 });
 
-// ===== Listener tombol copy =====
+// ===== Listener tombol copy (callback) =====
 bot.on('callback_query', async callbackQuery => {
   const msg = callbackQuery.message;
   const data = callbackQuery.data;
 
-  if (data.startsWith('copy_')) {
+  if (data && data.startsWith('copy_')) {
     const ticketCode = data.replace('copy_', '');
-    await bot.answerCallbackQuery(callbackQuery.id, { text: `${ticketCode} disalin!` });
+    // answerCallbackQuery is lightweight and not counted as sendMessage; still safe
+    try {
+      await bot.answerCallbackQuery(callbackQuery.id, { text: `${ticketCode} disalin!` });
+    } catch (e) {
+      console.warn('⚠️ answerCallbackQuery failed:', e && e.message);
+    }
   }
 });
 
@@ -170,10 +222,10 @@ bot.onText(/#lacak (.+)/, async (msg, match) => {
     const messageId = msg.message_id;
     const code = match[1]?.toUpperCase();
 
-    if (!code) return bot.sendMessage(chatId, '❌ Format salah. Gunakan #lacak <kode_tiket>', { reply_to_message_id: messageId });
+    if (!code) return sendMessage(chatId, '❌ Format salah. Gunakan #lacak <kode_tiket>', { reply_to_message_id: messageId });
 
     const ticket = await Ticket.findOne({ ticketCode: code });
-    if (!ticket) return bot.sendMessage(chatId, `❌ Tiket ${code} tidak ditemukan.`, { reply_to_message_id: messageId });
+    if (!ticket) return sendMessage(chatId, `❌ Tiket ${code} tidak ditemukan.`, { reply_to_message_id: messageId });
 
     const created = ticket.createdAt;
     const createdTanggal = `${created.getDate()}/${created.getMonth()+1}/${created.getFullYear()}`;
@@ -196,11 +248,11 @@ bot.onText(/#lacak (.+)/, async (msg, match) => {
       if (ticket.adminMessage) statusText += `📌 Catatan dari IT TA: ${escapeMarkdownV2(ticket.adminMessage)}\n`;
     }
 
-    await bot.sendMessage(chatId, statusText, { parse_mode: 'MarkdownV2', reply_to_message_id: messageId });
+    await sendMessage(chatId, statusText, { parse_mode: 'MarkdownV2', reply_to_message_id: messageId });
 
   } catch (err) {
     console.error('❌ Error #lacak listener:', err);
-    bot.sendMessage(msg.chat.id, '❌ Terjadi kesalahan saat menampilkan status tiket.', { reply_to_message_id: msg.message_id });
+    await sendMessage(msg.chat.id, '❌ Terjadi kesalahan saat menampilkan status tiket.', { reply_to_message_id: msg.message_id });
   }
 });
 
@@ -273,7 +325,7 @@ app.get('/api/tickets', async (req, res) => {
       if (ticket.status === 'Done') acc.totalSelesai++;
       else acc.totalDiproses++;
 
-      const picKey = ticket.pic || 'Belum Ditentukan';
+      const picKey = ticket.pic || 'BelumDitentukan';
       acc.picData[picKey] = (acc.picData[picKey] || 0) + 1;
 
       const textLower = (ticket.text || '').toLowerCase();
@@ -320,7 +372,7 @@ app.post('/api/tickets/:id/reply', upload.single('photo'), async (req, res) => {
 
     if (req.file) {
       try {
-        await bot.sendPhoto(ticket.chatId, req.file.buffer, {
+        await sendPhoto(ticket.chatId, req.file.buffer, {
           caption: `💬 <b>Update dari IT TA:</b>\n${balasan}`,
           parse_mode: 'HTML',
           reply_to_message_id: ticket.messageId
@@ -330,7 +382,7 @@ app.post('/api/tickets/:id/reply', upload.single('photo'), async (req, res) => {
       }
     } else {
       try {
-        await bot.sendMessage(ticket.chatId, `💬 <b>Update dari IT TA:</b>\n${balasan}`, {
+        await sendMessage(ticket.chatId, `💬 <b>Update dari IT TA:</b>\n${balasan}`, {
           parse_mode: 'HTML',
           reply_to_message_id: ticket.messageId
         });
@@ -375,7 +427,7 @@ app.patch('/api/tickets/:id/set-status', async (req, res) => {
     await ticket.save();
 
     try {
-      await bot.sendMessage(ticket.chatId, `Status tiket <code>${ticket.ticketCode}</code> diperbarui menjadi: ${status}`, {
+      await sendMessage(ticket.chatId, `Status tiket <code>${ticket.ticketCode}</code> diperbarui menjadi: ${status}`, {
         parse_mode: 'HTML',
         reply_to_message_id: ticket.messageId
       });
