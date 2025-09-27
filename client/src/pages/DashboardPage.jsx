@@ -135,9 +135,14 @@ function DashboardPage() {
           </button>
         </div>
 
+        {/* --- UCAPAN SELAMAT DATANG DAN SEMANGAT --- */}
+        <div className="mb-4">
+          <p className="mb-0">Selamat datang! Semangat menyelesaikan kendala hari ini 💪😄</p>
+        </div>
+
         <div className="dashboard-wrapper">
           <div className="chart-box panel">
-             <h6 className="fw-bold">Statistik Kendala (berdasarkan Pengerjaan)</h6>
+             <h6 className="fw-bold">Status Ticket</h6>
              <StatusChart data={{ totalDiproses: stats.totalDiproses, totalSelesai: stats.totalSelesai }} />
           </div>
           <div className="chart-box">
@@ -157,7 +162,7 @@ function DashboardPage() {
           </div>
 
           <div style={{ gridColumn: '1 / -1' }}>
-            
+           
             {/* --- PERUBAHAN TAMPILAN NAVIGASI TAB --- */}
             <div className="view-selector-wrapper d-flex justify-content-center border-bottom mb-4 pb-3">
               <ul className="nav nav-pills nav-fill gap-2">
