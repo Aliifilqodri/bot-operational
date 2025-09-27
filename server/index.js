@@ -48,6 +48,8 @@ const ticketSchema = new mongoose.Schema({
 });
 const Ticket = mongoose.model('Ticket', ticketSchema);
 
+
+
 // ===== Daftar PIC & Status =====
 const PIC_LIST = ['BelumDitentukan', 'sal', 'alf', 'rdh', 'fhn', 'drl', 'raf'];
 const STATUS_LIST = ['Diproses', 'On Hold', 'Menunggu Approval', 'Done'];
@@ -55,7 +57,7 @@ const STATUS_LIST = ['Diproses', 'On Hold', 'Menunggu Approval', 'Done'];
 // ===== Keywords untuk klasifikasi kasus =====
 const CASE_KEYWORDS = {
   'WFM - Mismatch Tiket': ['wfm not found', 'tiket not found', 'double tiket', 'wfm kosong', 'tidak bisa terclose', 'wfm masih open', 'gadak di wfm'],
-  'WFM - Tiket Nyangkut (Stuck)': ['nyangkut di finalcheck', 'nyangkut di backend', 'nyangkut di mediacare', 'nyangkut di slamsim', 'tidak bisa closed', 'wfm stuck backend', 'insera hilang'],
+  'WFM - Tiket Nyangkut (Stuck)': ['nyangkut di finalcheck', 'nyangkut di backend', 'nyangkut di mediacare', 'nyangkut di slamsim', 'tidak bisa closed', 'wfm stuck backend', 'insera hilang', 'tidak bisa push scc'],
   'WFM - Work Order Tidak Muncul': ['work order tidak muncul', 'wo tidak muncul', 'workorder section', 'assignment section'],
   'WFM - Masalah Akun Pengguna': ['user terkunci', 'gagal login', 'otp tidak masuk', 'user not registered', 'reset rekan teknisi'],
   'WFM - Teknisi Tidak Ditemukan': ['technician not found', 'teknisi tidak ditemukan'],
