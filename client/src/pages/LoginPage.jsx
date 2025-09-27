@@ -1,7 +1,8 @@
 // client/src/pages/LoginPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaUser, FaLock } from "react-icons/fa";
+// --- Perubahan: Mengganti ikon FaHome untuk rumah ---
+import { FaUser, FaLock, FaHome } from "react-icons/fa"; 
 import api from "../api";
 
 const LoginPage = () => {
@@ -21,65 +22,26 @@ const LoginPage = () => {
     }
   };
 
-  // === Background Partikel Neon Elegan ===
-  useEffect(() => {
-    const canvas = document.getElementById("neonCanvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const particles = [];
-    for (let i = 0; i < 60; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: Math.random() * 2 + 1,
-        dx: (Math.random() - 0.5) * 1.5,
-        dy: (Math.random() - 0.5) * 1.5,
-        color: `hsla(${Math.random() * 360}, 70%, 60%, 0.8)`,
-      });
-    }
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      particles.forEach((p) => {
-        p.x += p.dx;
-        p.y += p.dy;
-
-        if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 20;
-        ctx.fill();
-      });
-
-      requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  // --- DIHAPUS: useEffect untuk canvas partikel ---
+  // Kode canvas partikel dihapus untuk tampilan formal
+  // useEffect(() => { /* ... kode partikel ... */ }, []);
 
   return (
-    <div className="login-wrapper">
-      <canvas id="neonCanvas" className="neon-canvas"></canvas>
+    <div className="login-wrapper-formal"> {/* Mengubah nama kelas untuk styling baru */}
+      {/* --- DIHAPUS: canvas elemen --- */}
+      {/* <canvas id="neonCanvas" className="neon-canvas"></canvas> */}
 
-      <div className="login-card">
-        <h2 className="login-title">Masuk ke Dashboard</h2>
+      <div className="login-card-formal"> {/* Mengubah nama kelas untuk styling baru */}
+        {/* --- PENAMBAHAN: Ikon Rumah & Judul Dashboard --- */}
+        <div className="text-center mb-4">
+          <FaHome className="login-home-icon" /> {/* Ikon rumah */}
+          <h1 className="login-app-title">Dashboard Operational</h1> {/* Judul aplikasi */}
+        </div>
+
+        <h2 className="login-title-formal">Masuk ke Sistem</h2> {/* Judul login yang lebih formal */}
         <form onSubmit={handleLogin}>
-          <div className="input-group">
-            <FaUser className="icon" />
+          <div className="input-group-formal">
+            <FaUser className="icon-formal" />
             <input
               type="text"
               placeholder="Username"
@@ -89,8 +51,8 @@ const LoginPage = () => {
             />
           </div>
 
-          <div className="input-group">
-            <FaLock className="icon" />
+          <div className="input-group-formal">
+            <FaLock className="icon-formal" />
             <input
               type="password"
               placeholder="Password"
@@ -100,21 +62,22 @@ const LoginPage = () => {
             />
           </div>
 
-          <button type="submit" className="login-btn">
+          <button type="submit" className="login-btn-formal">
             Masuk
           </button>
-          {error && <div className="error-box">{error}</div>}
+          {error && <div className="error-box-formal">{error}</div>}
         </form>
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
         * {
-          font-family: 'Inter', sans-serif;
+          font-family: 'Poppins', sans-serif; /* Menggunakan Poppins atau Roboto untuk kesan formal */
         }
 
-        .login-wrapper {
+        .login-wrapper-formal {
           position: relative;
           width: 100%;
           height: 100vh;
@@ -122,109 +85,113 @@ const LoginPage = () => {
           justify-content: center;
           align-items: center;
           overflow: hidden;
-          background: linear-gradient(135deg, #0a0f1f, #081229);
+          /* Latar belakang formal dengan gradien abu-abu gelap */
+          background: linear-gradient(135deg, #2c3e50, #212529); 
         }
 
-        .neon-canvas {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          z-index: 0;
-        }
-
-        .login-card {
+        .login-card-formal {
           position: relative;
           z-index: 1;
-          backdrop-filter: blur(20px);
-          background: rgba(255, 255, 255, 0.06);
-          border-radius: 16px;
-          padding: 45px 40px;
-          width: 380px;
+          background: #ffffff; /* Kartu putih */
+          border-radius: 12px;
+          padding: 40px 35px;
+          width: 400px;
+          max-width: 90%; /* Responsif */
           text-align: center;
-          box-shadow: 0 0 30px rgba(0, 255, 255, 0.25);
-          border: 1px solid rgba(0, 255, 255, 0.2);
-          animation: fadeInUp 1s ease forwards;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); /* Bayangan lebih gelap dan formal */
+          border: 1px solid #e0e0e0; /* Border halus */
+          animation: fadeInUpFormal 0.8s ease forwards;
         }
 
-        .login-title {
-          color: #e6f7ff;
-          margin-bottom: 28px;
+        .login-home-icon {
+          font-size: 3.5rem; /* Ukuran ikon rumah */
+          color: #dc3545; /* Warna merah */
+          margin-bottom: 10px;
+        }
+
+        .login-app-title {
+          color: #343a40; /* Warna teks gelap */
           font-weight: 700;
-          font-size: 1.5rem;
-          text-shadow: 0 0 10px rgba(0,255,255,0.3);
+          font-size: 1.8rem;
+          margin-bottom: 25px;
         }
 
-        .input-group {
+        .login-title-formal {
+          color: #495057; /* Warna judul login */
+          margin-bottom: 28px;
+          font-weight: 600;
+          font-size: 1.4rem;
+        }
+
+        .input-group-formal {
           position: relative;
-          margin-bottom: 22px;
+          margin-bottom: 20px;
         }
 
-        .input-group .icon {
+        .input-group-formal .icon-formal {
           position: absolute;
           top: 50%;
           left: 15px;
           transform: translateY(-50%);
-          color: #00e0ff;
+          color: #6c757d; /* Warna ikon abu-abu */
           font-size: 18px;
-          opacity: 0.8;
         }
 
-        .input-group input {
+        .input-group-formal input {
           width: 100%;
-          padding: 12px 15px 12px 45px;
-          border-radius: 10px;
-          border: 1px solid rgba(0,255,255,0.3);
+          padding: 12px 15px 12px 50px; /* Padding kiri lebih besar untuk ikon */
+          border-radius: 8px;
+          border: 1px solid #ced4da; /* Border input default */
           outline: none;
-          background: rgba(255, 255, 255, 0.08);
-          color: #fff;
-          font-size: 15px;
-          transition: 0.3s;
+          background: #f8f9fa; /* Latar belakang input sedikit abu-abu */
+          color: #343a40;
+          font-size: 16px;
+          transition: 0.3s ease;
         }
 
-        .input-group input::placeholder {
-          color: #b8c6d8;
+        .input-group-formal input::placeholder {
+          color: #888;
         }
 
-        .input-group input:focus {
-          background: rgba(0, 255, 255, 0.12);
-          border-color: #00e0ff;
-          box-shadow: 0 0 15px rgba(0,255,255,0.5);
+        .input-group-formal input:focus {
+          border-color: #dc3545; /* Border merah saat fokus */
+          box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25); /* Glow merah saat fokus */
+          background: #fff;
         }
 
-        .login-btn {
+        .login-btn-formal {
           width: 100%;
           padding: 13px;
           border: none;
-          border-radius: 10px;
-          background: linear-gradient(90deg, #00e0ff, #0072ff);
+          border-radius: 8px;
+          background: linear-gradient(90deg, #dc3545, #a71d2a); /* Gradien merah */
           color: #fff;
           font-weight: 600;
-          font-size: 15px;
+          font-size: 17px;
           cursor: pointer;
-          transition: 0.35s;
-          box-shadow: 0 0 15px rgba(0, 224, 255, 0.3);
+          transition: 0.3s ease;
+          box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
         }
 
-        .login-btn:hover {
+        .login-btn-formal:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(0, 224, 255, 0.5);
+          box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+          background: linear-gradient(90deg, #a71d2a, #dc3545); /* Efek hover gradien terbalik */
         }
 
-        .error-box {
-          margin-top: 18px;
-          padding: 10px;
+        .error-box-formal {
+          margin-top: 20px;
+          padding: 12px;
           border-radius: 8px;
-          background: rgba(255, 77, 77, 0.1);
-          border: 1px solid rgba(255,77,77,0.3);
-          color: #ff6b6b;
+          background: #f8d7da; /* Latar belakang error merah muda */
+          border: 1px solid #f5c6cb;
+          color: #721c24; /* Teks error merah gelap */
           font-size: 14px;
           font-weight: 500;
         }
 
-        @keyframes fadeInUp {
-          0% { opacity: 0; transform: translateY(25px); }
+        @keyframes fadeInUpFormal {
+          0% { opacity: 0; transform: translateY(20px); }
           100% { opacity: 1; transform: translateY(0); }
         }
       `}</style>
