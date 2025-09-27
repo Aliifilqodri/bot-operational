@@ -1,68 +1,71 @@
 import React from 'react';
-import { Bar } from 'react-chartjs-2';
+import { Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
+  ArcElement,
   Tooltip,
   Legend,
+  Title,
 } from 'chart.js';
 
 // Daftarkan komponen chart.js
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(ArcElement, Tooltip, Legend, Title);
 
-function CaseChart({ data }) {
-  // pastikan data selalu objek dan nilai angka
+function CasePieChart({ data }) {
   const safeData = data || {};
   const labels = Object.keys(safeData);
   const values = Object.values(safeData).map(val => Number(val) || 0);
+
+  // Warna pie otomatis
+  const backgroundColors = labels.map(
+    (_, i) =>
+      `hsl(${(i * 360) / labels.length}, 70%, 50%)` // variasi warna HSL
+  );
 
   const chartData = {
     labels,
     datasets: [
       {
-        label: 'Jumlah Kemunculan',
         data: values,
-        backgroundColor: '#3b82f6',
-        borderRadius: 6,
+        backgroundColor: backgroundColors,
+        borderColor: '#fff',
+        borderWidth: 2,
       },
     ],
   };
 
   const options = {
     responsive: true,
-    indexAxis: 'y', // horizontal bar
-    scales: {
-      x: {
-        beginAtZero: true,
-        ticks: {
-          stepSize: 1,
-        },
-      },
-      y: {
-        ticks: {
-          autoSkip: false,
-        },
-      },
-    },
     plugins: {
-      legend: { display: false },
+      legend: {
+        position: 'right',
+        labels: {
+          boxWidth: 20,
+          padding: 15,
+        },
+      },
       title: {
         display: true,
         text: 'Distribusi Kasus',
         font: {
-          size: 16,
+          size: 18,
+          weight: 'bold',
         },
       },
       tooltip: {
         enabled: true,
+        callbacks: {
+          label: function (tooltipItem) {
+            const label = tooltipItem.label || '';
+            const value = tooltipItem.raw || 0;
+            return `${label}: ${value}`;
+          },
+        },
       },
     },
   };
 
-  return <Bar data={chartData} options={options} />;
+  return <Pie data={chartData} options={options} />;
 }
 
-export default CaseChart;
+export default CasePieChart;
