@@ -1,4 +1,3 @@
-// client/src/components/TicketCard.jsx
 import React, { useState } from 'react';
 import api from '../api'; // axios instance yang sudah membawa token
 import toast from 'react-hot-toast';
@@ -21,6 +20,8 @@ const CONFIG = {
     clock: "M10 18a8 8 0 100-16 8 8 0 000 16zm1-12H9v7h6v-2h-4V6z",
     send: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8",
     arrow: "M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3",
+    // PENAMBAHAN 1: Ikon untuk paperclip
+    paperclip: "M6.5 7a3.5 3.5 0 0 0-3.5 3.5v9a3.5 3.5 0 0 0 3.5 3.5h11a3.5 3.5 0 0 0 3.5-3.5v-13a3.5 3.5 0 0 0-3.5-3.5h-13a.5.5 0 0 0 0 1h13a2.5 2.5 0 0 1 2.5 2.5v13a2.5 2.5 0 0 1-2.5 2.5h-11a2.5 2.5 0 0 1-2.5-2.5v-9a2.5 2.5 0 0 1 2.5-2.5h10.5a.5.5 0 0 0 0-1H6.5z",
   }
 };
 
@@ -37,7 +38,6 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
   const [balasan, setBalasan] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
 
-  // --- WARNA STATUS ---
   const statusKey = ticket.status.toLowerCase();
   const statusColors = CONFIG.COLORS[statusKey] || { bg: '#f3f4f6', text: '#4b5563' };
 
@@ -48,47 +48,31 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
   const reportedDate = formatDate(ticket.createdAt);
   const completedDate = ticket.status.toLowerCase() === 'done' && ticket.completedAt ? formatDate(ticket.completedAt) : null;
 
-  // --- HANDLE PIC ---
   const handleSetPic = (e) => {
     const selectedPic = e.target.value;
     toast.promise(
       api.patch(`/tickets/${ticket._id}/set-pic`, { pic: selectedPic }).then(() => refreshData()),
-      {
-        loading: 'Menetapkan PIC...',
-        success: `PIC ditetapkan: ${selectedPic}`,
-        error: 'Gagal menetapkan PIC.',
-      }
+      { loading: 'Menetapkan PIC...', success: `PIC ditetapkan: ${selectedPic}`, error: 'Gagal menetapkan PIC.' }
     );
   };
 
-  // --- HANDLE STATUS (FIX 400 BAD REQUEST) ---
   const handleStatusChange = (e) => {
-    const newStatusDisplay = e.target.value; // "Diproses", "On Hold", dll
+    const newStatusDisplay = e.target.value;
     if (!STATUS_LIST.includes(newStatusDisplay)) return toast.error('Status tidak valid.');
-
     toast.promise(
       api.patch(`/tickets/${ticket._id}/set-status`, { status: newStatusDisplay }).then(() => refreshData()),
-      {
-        loading: 'Mengubah status...',
-        success: `Status diubah menjadi ${newStatusDisplay}`,
-        error: 'Gagal mengubah status.',
-      }
+      { loading: 'Mengubah status...', success: `Status diubah menjadi ${newStatusDisplay}`, error: 'Gagal mengubah status.' }
     );
   };
 
-  // --- HANDLE BALASAN ---
   const handleReply = async () => {
     if (!balasan.trim()) return toast.error('Balasan tidak boleh kosong.');
-
     const formData = new FormData();
     formData.append('balasan', balasan);
     if (selectedFile) formData.append('photo', selectedFile);
-
     const toastId = toast.loading('Mengirim balasan...');
     try {
-      await api.post(`/tickets/${ticket._id}/reply`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post(`/tickets/${ticket._id}/reply`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       toast.success('Balasan berhasil terkirim!', { id: toastId });
       setBalasan('');
       setSelectedFile(null);
@@ -104,8 +88,46 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
   const isLongText = words.length > TRUNCATE_WORDS;
 
   return (
-    <div style={{ backgroundColor: '#fff', borderRadius: '16px', boxShadow: '0 4px 8px rgba(0,0,0,0.02),0 10px 20px rgba(0,0,0,0.06)', border: `1px solid ${CONFIG.COLORS.border}`, display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ 
+      backgroundColor: '#fff', 
+      borderRadius: '16px', 
+      boxShadow: '0 4px 8px rgba(0,0,0,0.02),0 10px 20px rgba(0,0,0,0.06)', 
+      border: `1px solid ${CONFIG.COLORS.border}`, 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100%',
+      // PENAMBAHAN 2: position: 'relative' pada pembungkus utama agar penjepit bisa 'menggantung'
+      position: 'relative'
+    }}>
       
+      {/* PENAMBAHAN 3: Tombol lampiran yang "menggantung" */}
+      {ticket.photoUrl && (
+        <button 
+          onClick={() => onImageClick(ticket.photoUrl)} 
+          style={{
+            position: 'absolute',
+            top: '-16px',
+            right: '16px',
+            zIndex: 10,
+            backgroundColor: 'white',
+            border: `1px solid ${CONFIG.COLORS.border}`,
+            borderRadius: '50%',
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            transition: 'transform 0.2s ease-in-out',
+          }}
+          onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <Icon path={CONFIG.ICONS.paperclip} size="1.2em" color={CONFIG.COLORS.text.label} />
+        </button>
+      )}
+
       {/* Header */}
       <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${CONFIG.COLORS.border}`, backgroundColor: statusColors.bg, borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
         <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '600', backgroundColor: statusColors.text, color: '#fff' }}>{ticket.status}</span>
@@ -117,9 +139,7 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
 
       {/* Body */}
       <div style={{ padding: '20px', lineHeight: 1.6, flexGrow: 1 }}>
-        {ticket.photoUrl && (
-          <img src={ticket.photoUrl} alt="Bukti Kendala" style={{ width: '100%', borderRadius: '10px', cursor: 'pointer', marginBottom: '16px', objectFit: 'cover', maxHeight: '300px' }} onClick={() => onImageClick(ticket.photoUrl)} />
-        )}
+        {/* DIHAPUS: Blok kode img yang asli sudah dipindahkan ke atas menjadi tombol */}
         <p style={{ margin: 0, fontSize: '1rem', color: CONFIG.COLORS.text.primary, wordBreak: 'break-word' }}>
           {isLongText ? words.slice(0, TRUNCATE_WORDS).join(' ') + '...' : ticket.text}
         </p>
@@ -139,8 +159,6 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
             <div style={{ fontWeight: '600', color: CONFIG.COLORS.text.primary }}>{ticket.pic || 'Belum Ditentukan'}</div>
           </div>
         </div>
-
-        {/* Timeline */}
         <div style={{ marginTop: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: CONFIG.COLORS.text.label, fontSize: '0.8rem', marginBottom: '4px' }}><Icon path={CONFIG.ICONS.clock} /><span>TIMELINE</span></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: CONFIG.COLORS.text.primary }}>
@@ -155,13 +173,8 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
       {ticket.status.toLowerCase() !== 'done' && (
         <div style={{ marginTop: 'auto', padding: '20px', backgroundColor: CONFIG.COLORS.actionBg, borderTop: `1px solid ${CONFIG.COLORS.border}`, borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Baris 1: Ubah Status & PIC */}
             <div style={{ display: 'flex', gap: '8px' }}>
-              <select
-                className="form-select form-select-sm"
-                value={STATUS_LIST.includes(ticket.status) ? ticket.status : 'Diproses'}
-                onChange={handleStatusChange}
-              >
+              <select className="form-select form-select-sm" value={STATUS_LIST.includes(ticket.status) ? ticket.status : 'Diproses'} onChange={handleStatusChange}>
                 {STATUS_LIST.map(status => (<option key={status} value={status}>{status}</option>))}
               </select>
               <select className="form-select form-select-sm" value={ticket.pic || 'Belum Ditentukan'} onChange={handleSetPic}>
@@ -169,8 +182,6 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
                 {picList.filter(pic => pic !== 'Belum Ditentukan').map(pic => (<option key={pic} value={pic}>{pic.toUpperCase()}</option>))}
               </select>
             </div>
-
-            {/* Baris 2: Kirim Balasan */}
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <input type="file" id={`file-${ticket._id}`} style={{ display: 'none' }} onChange={(e) => setSelectedFile(e.target.files[0])} accept="image/*" />
               <label htmlFor={`file-${ticket._id}`} className="btn btn-outline-secondary btn-sm" style={{ padding: '0.25rem 0.5rem' }}>📎</label>
