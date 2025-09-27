@@ -1,19 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import {
   Chart as ChartJS,
-  ArcElement, // Diperlukan untuk Pie & Doughnut chart
+  ArcElement,
   Tooltip,
   Legend,
-  Title, // Opsional untuk judul
+  Title,
 } from 'chart.js';
 
-// Daftarkan komponen Chart.js yang akan digunakan untuk Pie Chart
-ChartJS.register(
-  ArcElement, 
-  Tooltip, 
-  Legend,
-  Title
-);
+ChartJS.register(ArcElement, Tooltip, Legend, Title);
 
 const StatusChart = ({ data }) => {
   const chartRef = useRef(null);
@@ -21,59 +15,64 @@ const StatusChart = ({ data }) => {
 
   useEffect(() => {
     if (!chartRef.current) return;
-    
-    // Hancurkan chart yang ada sebelumnya
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
-    }
+
+    if (chartInstance.current) chartInstance.current.destroy();
 
     const ctx = chartRef.current.getContext('2d');
-    
+
+    // Buat gradien untuk slice
+    const gradientDiproses = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientDiproses.addColorStop(0, '#fbbf24'); // oranye muda
+    gradientDiproses.addColorStop(1, '#f59e0b'); // oranye tua
+
+    const gradientSelesai = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientSelesai.addColorStop(0, '#34d399'); // hijau muda
+    gradientSelesai.addColorStop(1, '#10b981'); // hijau tua
+
     chartInstance.current = new ChartJS(ctx, {
-      type: 'pie', // Tipe chart diubah menjadi 'pie'
+      type: 'doughnut',
       data: {
-        // Label sekarang mendefinisikan setiap "potongan" pie
         labels: ['Diproses', 'Selesai'],
         datasets: [
           {
-            // Data adalah array yang sesuai dengan urutan label
-            data: [data.totalDiproses, data.totalSelesai],
-            // BackgroundColor juga array yang sesuai dengan urutan label
-            backgroundColor: [
-              'rgba(255, 159, 64, 0.7)', // Warna oranye untuk 'Diproses'
-              'rgba(75, 192, 192, 0.7)', // Warna hijau toska untuk 'Selesai'
-            ],
-            borderColor: [
-              'rgba(255, 159, 64, 1)',
-              'rgba(75, 192, 192, 1)',
-            ],
-            borderWidth: 1,
+            data: [data.totalDiproses || 0, data.totalSelesai || 0],
+            backgroundColor: [gradientDiproses, gradientSelesai],
+            borderColor: ['#f59e0b', '#10b981'],
+            borderWidth: 2,
+            hoverOffset: 20,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        cutout: '60%',
         plugins: {
           legend: {
-            position: 'top', // Posisi legenda (misal: 'top', 'bottom', 'left', 'right')
+            position: 'right',
+            labels: { boxWidth: 20, padding: 15 },
           },
           title: {
             display: true,
-            text: 'Distribusi Status Tiket', // Judul chart
-            font: {
-              size: 16
-            }
+            text: 'Distribusi Status Tiket',
+            font: { size: 18, weight: 'bold' },
+          },
+          tooltip: {
+            callbacks: {
+              label: function (tooltipItem) {
+                const value = tooltipItem.raw;
+                const total = tooltipItem.dataset.data.reduce((a, b) => a + b, 0);
+                const percent = total ? ((value / total) * 100).toFixed(1) : 0;
+                return `${tooltipItem.label}: ${value} (${percent}%)`;
+              },
+            },
           },
         },
-        // Pie chart tidak menggunakan skala sumbu (x/y)
       },
     });
 
     return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
-      }
+      if (chartInstance.current) chartInstance.current.destroy();
     };
   }, [data]);
 
