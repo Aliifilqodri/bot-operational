@@ -1,25 +1,51 @@
 import React from 'react';
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title } from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(ArcElement, Tooltip, Legend, Title);
 
-function PicChart({ data }) {
+function PicPieChart({ data }) {
+  const labels = Object.keys(data);
+  const values = Object.values(data).map(val => Number(val) || 0);
+
+  // Warna otomatis untuk setiap slice
+  const backgroundColors = labels.map(
+    (_, i) => `hsl(${(i * 360) / labels.length}, 70%, 50%)`
+  );
+
+  const total = values.reduce((a, b) => a + b, 0);
+
   const chartData = {
-    labels: Object.keys(data),
-    datasets: [{
-      label: 'Jumlah Tiket',
-      data: Object.values(data),
-      backgroundColor: '#ef4444',
-      borderRadius: 6,
-    }],
+    labels,
+    datasets: [
+      {
+        data: values,
+        backgroundColor: backgroundColors,
+        borderColor: '#fff',
+        borderWidth: 2,
+      },
+    ],
   };
+
   const options = {
     responsive: true,
-    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 20, padding: 15 } },
+      title: { display: true, text: 'Distribusi Tiket', font: { size: 18, weight: 'bold' } },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: function (tooltipItem) {
+            const value = tooltipItem.raw;
+            const percent = total ? ((value / total) * 100).toFixed(1) : 0;
+            return `${tooltipItem.label}: ${value} (${percent}%)`;
+          },
+        },
+      },
+    },
   };
-  return <Bar data={chartData} options={options} />;
+
+  return <Pie data={chartData} options={options} />;
 }
 
-export default PicChart;
+export default PicPieChart;
