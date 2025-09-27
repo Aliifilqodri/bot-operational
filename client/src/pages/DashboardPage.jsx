@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
 import { Modal } from 'react-bootstrap';
-import { FaFileExcel, FaSignOutAlt } from 'react-icons/fa';
+// --- PENAMBAHAN: Import ikon baru untuk navigasi tab ---
+import { FaFileExcel, FaSignOutAlt, FaSearch, FaTicketAlt, FaSyncAlt, FaCheckCircle } from 'react-icons/fa';
 
 import TicketCard from '../components/TicketCard';
 import StatusChart from '../components/StatusChart';
@@ -11,237 +12,249 @@ import PicChart from '../components/PicChart';
 import CaseChart from '../components/CaseChart';
 import DailyChart from '../components/DailyChart';
 
-const API_URL = 'http://localhost:3000/api/tickets';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 function DashboardPage() {
   const [tickets, setTickets] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Filter
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [activeView, setActiveView] = useState('all');
+
   const [picFilter, setPicFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const ticketsPerPage = 10;
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Modal
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState('');
   const [showTextModal, setShowTextModal] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [selectedTextUser, setSelectedTextUser] = useState('');
 
-  // Logout
   const handleLogout = () => {
-    localStorage.removeItem('token'); // hapus JWT
-    window.location.href = '/login'; // redirect ke login
+    localStorage.removeItem('token');
+    window.location.href = '/login';
   };
 
   const handleShowImage = (imageUrl) => {
     setSelectedImageUrl(imageUrl);
     setShowImageModal(true);
   };
-  const handleCloseImage = () => {
-    setShowImageModal(false);
-    setSelectedImageUrl('');
-  };
+  const handleCloseImage = () => setShowImageModal(false);
 
   const handleShowTextModal = (ticket) => {
     setSelectedText(ticket.text);
     setSelectedTextUser(ticket.username);
     setShowTextModal(true);
   };
-  const handleCloseTextModal = () => {
-    setShowTextModal(false);
-    setSelectedText('');
-    setSelectedTextUser('');
-  };
+  const handleCloseTextModal = () => setShowTextModal(false);
 
-  // Fetch tickets & stats
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await axios.get(API_URL, {
-        headers: { Authorization: `Bearer ${token}` }
+      
+      let statusForApi;
+      if (activeView === 'processed') {
+        statusForApi = 'Diproses,On Hold,Menunggu Approval';
+      } else if (activeView === 'completed') {
+        statusForApi = 'Done';
+      } else {
+        statusForApi = 'all';
+      }
+
+      const params = new URLSearchParams({
+        page: currentPage,
+        limit: 12,
+        status: statusForApi,
+        pic: picFilter,
+        startDate,
+        endDate,
+        search: searchQuery,
       });
+
+      const res = await axios.get(`${API_URL}/tickets`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params,
+      });
+
       setTickets(res.data.tickets);
+      setTotalPages(res.data.totalPages);
       setStats(res.data.stats);
     } catch (err) {
       console.error('Gagal fetch data:', err);
-      setStats(null);
+      if (err.response && err.response.status === 401) {
+        handleLogout();
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, picFilter, startDate, endDate, searchQuery, activeView]);
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000); // refresh tiap 30 detik
-    return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Reset filter
   const handleResetFilters = () => {
-    setStatusFilter('all');
     setPicFilter('all');
     setStartDate('');
     setEndDate('');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+  
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
     setCurrentPage(1);
   };
 
-  // Filtering
-  const filteredTickets = tickets.filter(ticket => {
-    const statusMatch = statusFilter === 'all' || ticket.status === statusFilter;
-    const picMatch = picFilter === 'all' || ticket.pic === picFilter;
-
-    let dateMatch = true;
-    const ticketDate = new Date(ticket.createdAt);
-    ticketDate.setHours(0,0,0,0);
-
-    if(startDate){
-      const start = new Date(startDate); start.setHours(0,0,0,0);
-      if(ticketDate < start) dateMatch = false;
-    }
-    if(endDate){
-      const end = new Date(endDate); end.setHours(0,0,0,0);
-      if(ticketDate > end) dateMatch = false;
-    }
-
-    return statusMatch && picMatch && dateMatch;
-  });
-
-  // Pagination
-  const indexOfLastTicket = currentPage * ticketsPerPage;
-  const indexOfFirstTicket = indexOfLastTicket - ticketsPerPage;
-  const currentTickets = filteredTickets.slice(indexOfFirstTicket, indexOfLastTicket);
-  const totalPages = Math.ceil(filteredTickets.length / ticketsPerPage);
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // Export Excel
   const handleExport = () => {
-    window.location.href = 'http://localhost:3000/api/tickets/export';
+    window.location.href = `${API_URL}/tickets/export`;
   };
 
-  if(loading && !stats) return <div className="container my-5"><h1>Memuat data...</h1></div>;
-  if(!stats) return <div className="container my-5"><h1>Gagal memuat data statistik.</h1></div>;
+  const handleViewChange = (view) => {
+    setActiveView(view);
+    setCurrentPage(1);
+  };
+
+  if (loading && !stats) return <div className="container my-5"><h1>Memuat data...</h1></div>;
+  if (!stats) return <div className="container my-5"><h1>Gagal memuat data. Coba refresh halaman.</h1></div>;
 
   return (
     <>
-      <Toaster position="top-center"/>
+      <Toaster position="top-center" />
       <div className="container my-5">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h1>📊 Dashboard Kendala Operational</h1>
           <button className="btn btn-danger" onClick={handleLogout}>
-            <FaSignOutAlt className="me-1"/> Logout
+            <FaSignOutAlt className="me-1" /> Logout
           </button>
         </div>
 
         <div className="dashboard-wrapper">
           <div className="chart-box panel">
-            <h6 className="fw-bold">Statistik Kendala</h6>
-            <StatusChart data={{ totalDiproses: stats.totalDiproses, totalSelesai: stats.totalSelesai }}/>
+             <h6 className="fw-bold">Statistik Kendala (berdasarkan Pengerjaan)</h6>
+             <StatusChart data={{ totalDiproses: stats.totalDiproses, totalSelesai: stats.totalSelesai }} />
           </div>
-
           <div className="chart-box">
-            <h6 className="fw-bold">Tiket per Penanggung Jawab</h6>
-            <PicChart data={stats.picData}/>
+             <h6 className="fw-bold">Tiket per PIC</h6>
+             <PicChart data={stats.picData} />
           </div>
-
           <div className="chart-box">
-            <h6 className="fw-bold">Case Terbanyak</h6>
-            {stats.caseData && Object.keys(stats.caseData).length>0 ? 
-              <CaseChart data={stats.caseData}/> :
-              <div className="alert alert-info text-center">Tidak ada data case tersedia.</div>
-            }
+              <h6 className="fw-bold">Case Terbanyak</h6>
+              {stats.caseData && Object.keys(stats.caseData).length > 0 ? 
+                <CaseChart data={stats.caseData}/> :
+                <div className="alert alert-info text-center">Tidak ada data case.</div>
+              }
           </div>
-
           <div className="chart-box">
-            <h6 className="fw-bold">Statistik Harian (Hari Ini vs Kemarin)</h6>
-            <DailyChart today={stats.statsToday} yesterday={stats.statsYesterday}/>
+             <h6 className="fw-bold">Statistik Harian</h6>
+             <DailyChart today={stats.statsToday} yesterday={stats.statsYesterday} />
           </div>
 
           <div style={{ gridColumn: '1 / -1' }}>
-            {/* Filter Panel */}
-            <div className="filter-panel d-flex flex-wrap align-items-end gap-2">
-              {/* Status Filter */}
-              <div className="filter-group">
-                <label>Status Tiket</label>
-                <div className="filter-buttons btn-group">
-                  {['all','Diproses','Selesai'].map(s => (
-                    <button key={s} className={statusFilter===s?'active btn':'btn'} 
-                      onClick={()=>{setStatusFilter(s); setCurrentPage(1);}}>
-                      {s==='all'?'Semua':s}
-                    </button>
-                  ))}
+            
+            {/* --- PERUBAHAN TAMPILAN NAVIGASI TAB --- */}
+            <div className="view-selector-wrapper d-flex justify-content-center border-bottom mb-4 pb-3">
+              <ul className="nav nav-pills nav-fill gap-2">
+                <li className="nav-item">
+                  <button
+                    className={`nav-link d-flex align-items-center justify-content-center gap-2 ${activeView === 'all' ? 'active shadow-sm' : ''}`}
+                    onClick={() => handleViewChange('all')}
+                  >
+                    <FaTicketAlt />
+                    Semua Tiket
+                    <span className="badge rounded-pill bg-secondary">{stats ? stats.totalDiproses + stats.totalSelesai : '...'}</span>
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button
+                    className={`nav-link d-flex align-items-center justify-content-center gap-2 ${activeView === 'processed' ? 'active shadow-sm' : ''}`}
+                    onClick={() => handleViewChange('processed')}
+                  >
+                    <FaSyncAlt />
+                    Tiket Diproses
+                    <span className="badge rounded-pill bg-warning text-dark">{stats ? stats.totalDiproses : '...'}</span>
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button
+                    className={`nav-link d-flex align-items-center justify-content-center gap-2 ${activeView === 'completed' ? 'active shadow-sm' : ''}`}
+                    onClick={() => handleViewChange('completed')}
+                  >
+                    <FaCheckCircle />
+                    Tiket Selesai
+                    <span className="badge rounded-pill bg-success">{stats ? stats.totalSelesai : '...'}</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="filter-panel d-flex flex-wrap align-items-end gap-3 p-3 mb-3">
+              <div className="filter-group flex-grow-1">
+                <label>Cari Tiket (Kode, Deskripsi, User)</label>
+                <div className="input-group">
+                  <span className="input-group-text"><FaSearch/></span>
+                  <input 
+                    type="text" 
+                    className="form-control form-control-sm" 
+                    placeholder="Ketik untuk mencari..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                  />
                 </div>
               </div>
 
-              {/* PIC Filter */}
               <div className="filter-group">
                 <label>PIC</label>
-                <select className="form-select form-select-sm" value={picFilter} onChange={e=>{setPicFilter(e.target.value); setCurrentPage(1);}}>
+                <select className="form-select form-select-sm" value={picFilter} onChange={e => { setPicFilter(e.target.value); setCurrentPage(1); }}>
                   <option value="all">Semua PIC</option>
-                  <option value="Belum Ditentukan">Belum Ditentukan</option>
-                  {stats.picList.map(pic => <option key={pic} value={pic}>{pic.toUpperCase()}</option>)}
+                  {stats.picList && stats.picList.map(pic => <option key={pic} value={pic}>{pic === 'BelumDitentukan' ? 'Belum Ditentukan' : pic.toUpperCase()}</option>)}
                 </select>
               </div>
 
-              {/* Date Filter */}
               <div className="filter-group">
                 <label>Dari Tanggal</label>
-                <input type="date" className="form-control form-control-sm" value={startDate} onChange={e=>{setStartDate(e.target.value); setCurrentPage(1);}}/>
+                <input type="date" className="form-control form-control-sm" value={startDate} onChange={e => { setStartDate(e.target.value); setCurrentPage(1); }}/>
               </div>
               <div className="filter-group">
                 <label>Sampai Tanggal</label>
-                <input type="date" className="form-control form-control-sm" value={endDate} onChange={e=>{setEndDate(e.target.value); setCurrentPage(1);}}/>
+                <input type="date" className="form-control form-control-sm" value={endDate} onChange={e => { setEndDate(e.target.value); setCurrentPage(1); }}/>
               </div>
 
-              {/* Reset & Export */}
-              <div className="filter-group ms-auto d-flex gap-2">
+              <div className="filter-group d-flex gap-2">
                 <button className="btn btn-secondary btn-sm" onClick={handleResetFilters}>Reset Filter</button>
-                <button className="btn btn-success btn-sm" onClick={handleExport}><FaFileExcel className="me-1"/> Ekspor Excel</button>
+                <button className="btn btn-success btn-sm" onClick={handleExport}><FaFileExcel className="me-1"/> Ekspor</button>
               </div>
             </div>
 
-            {/* Tickets */}
             <div className="ticket-list mt-3">
-              {currentTickets.length>0 ? currentTickets.map(ticket=>(
-                <TicketCard key={ticket._id} ticket={ticket} picList={stats.picList} refreshData={fetchData} onImageClick={handleShowImage} onTextClick={handleShowTextModal}/>
-              )) : <div className="alert alert-danger text-center">Tidak ada kendala yang cocok dengan filter.</div>}
+              {tickets.length > 0 ? tickets.map(ticket => (
+                <TicketCard key={ticket._id} ticket={ticket} picList={stats.picList} refreshData={fetchData} onImageClick={handleShowImage} onTextClick={handleShowTextModal} />
+              )) : <div className="alert alert-warning text-center">Tidak ada kendala yang cocok dengan filter.</div>}
             </div>
 
-            {/* Pagination */}
-            {totalPages>1 &&
+            {totalPages > 1 &&
               <div className="pagination mt-3 d-flex justify-content-center gap-2">
-                <button className="btn btn-sm btn-secondary" onClick={()=>paginate(currentPage-1)} disabled={currentPage===1}>Prev</button>
-                {Array.from({length: totalPages}, (_,i)=>(<button key={i} className={`btn btn-sm ${currentPage===i+1?'btn-primary':'btn-outline-primary'}`} onClick={()=>paginate(i+1)}>{i+1}</button>))}
-                <button className="btn btn-sm btn-secondary" onClick={()=>paginate(currentPage+1)} disabled={currentPage===totalPages}>Next</button>
+                <button className="btn btn-sm btn-secondary" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>Prev</button>
+                <span className="align-self-center">Halaman {currentPage} dari {totalPages}</span>
+                <button className="btn btn-sm btn-secondary" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>Next</button>
               </div>
             }
           </div>
         </div>
       </div>
 
-      {/* Modal Gambar */}
       <Modal show={showImageModal} onHide={handleCloseImage} centered size="lg">
-        <Modal.Body style={{padding:0}}>
-          <img src={selectedImageUrl} alt="Detail Kendala" style={{width:'100%', height:'auto'}}/>
-        </Modal.Body>
+        <Modal.Body style={{padding:0}}><img src={selectedImageUrl} alt="Detail Kendala" style={{width:'100%', height:'auto'}}/></Modal.Body>
       </Modal>
-
-      {/* Modal Teks */}
       <Modal show={showTextModal} onHide={handleCloseTextModal} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Detail Kendala dari @{selectedTextUser}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p style={{whiteSpace:'pre-wrap'}}>{selectedText}</p>
-        </Modal.Body>
+        <Modal.Header closeButton><Modal.Title>Detail dari @{selectedTextUser}</Modal.Title></Modal.Header>
+        <Modal.Body><p style={{whiteSpace:'pre-wrap'}}>{selectedText}</p></Modal.Body>
       </Modal>
     </>
   );

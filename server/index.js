@@ -18,10 +18,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ===== Koneksi MongoDB =====
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ Terhubung ke MongoDB'))
-  .catch(err => console.error('❌ Gagal terhubung ke MongoDB:', err));
+// ===== Koneksi MongoDB (Update tanpa warning) =====
+mongoose
+  .connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/operationalserver')
+  .then(() => console.log('✅ MongoDB connected!'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // ===== Schema & Model =====
 const ticketSchema = new mongoose.Schema({
@@ -33,10 +34,10 @@ const ticketSchema = new mongoose.Schema({
   chatType: { type: String, default: 'private' },
   groupName: { type: String, default: 'Private Chat' },
   text: { type: String, required: true },
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     default: 'Diproses',
-    enum: ['Diproses', 'On Hold', 'Menunggu Approval', 'Done'] 
+    enum: ['Diproses', 'On Hold', 'Menunggu Approval', 'Done']
   },
   adminMessage: { type: String, default: "" },
   pic: { type: String, default: 'BelumDitentukan' },
@@ -52,18 +53,18 @@ const STATUS_LIST = ['Diproses', 'On Hold', 'Menunggu Approval', 'Done'];
 
 // ===== Keywords untuk klasifikasi kasus =====
 const CASE_KEYWORDS = {
-  'WFM - Mismatch Tiket': ['wfm not found','tiket not found','double tiket','wfm kosong','tidak bisa terclose','wfm masih open','gadak di wfm'],
-  'WFM - Tiket Nyangkut (Stuck)': ['nyangkut di finalcheck','nyangkut di backend','nyangkut di mediacare','nyangkut di slamsim','tidak bisa closed','wfm stuck backend','insera hilang'],
-  'WFM - Work Order Tidak Muncul': ['work order tidak muncul','wo tidak muncul','workorder section','assignment section'],
-  'WFM - Masalah Akun Pengguna': ['user terkunci','gagal login','otp tidak masuk','user not registered','reset rekan teknisi'],
-  'WFM - Teknisi Tidak Ditemukan': ['technician not found','teknisi tidak ditemukan'],
-  'WFM - Masalah Owner Group': ['owner grup','owner group','owner group, witel,service id , service number , dll kosong','munculkan owner'],
-  'INSERA - Mismatch Tiket': ['insera tidak muncul','insera not found','not found di insera','insera gadak','gadak di insera'],
-  'Mytech - Masalah Akun / Login': ['user_rsc_notactive','user_notactive','user auth failed','user_auth_locked'],
+  'WFM - Mismatch Tiket': ['wfm not found', 'tiket not found', 'double tiket', 'wfm kosong', 'tidak bisa terclose', 'wfm masih open', 'gadak di wfm'],
+  'WFM - Tiket Nyangkut (Stuck)': ['nyangkut di finalcheck', 'nyangkut di backend', 'nyangkut di mediacare', 'nyangkut di slamsim', 'tidak bisa closed', 'wfm stuck backend', 'insera hilang'],
+  'WFM - Work Order Tidak Muncul': ['work order tidak muncul', 'wo tidak muncul', 'workorder section', 'assignment section'],
+  'WFM - Masalah Akun Pengguna': ['user terkunci', 'gagal login', 'otp tidak masuk', 'user not registered', 'reset rekan teknisi'],
+  'WFM - Teknisi Tidak Ditemukan': ['technician not found', 'teknisi tidak ditemukan'],
+  'WFM - Masalah Owner Group': ['owner grup', 'owner group', 'owner group, witel,service id , service number , dll kosong', 'munculkan owner'],
+  'INSERA - Mismatch Tiket': ['insera tidak muncul', 'insera not found', 'not found di insera', 'insera gadak', 'gadak di insera'],
+  'Mytech - Masalah Akun / Login': ['user_rsc_notactive', 'user_notactive', 'user auth failed', 'user_auth_locked'],
   'SAP - Revoke': ['revoke'],
-  'Alista - Koreksi Data': ['delete bai','ba duplikasi','alista','salah input'],
-  'Alista - Material & Reservasi': ['input material','reservasi id','reservasi double'],
-  'Alista - PIC Controller': ['pic controler','pic kontroler']
+  'Alista - Koreksi Data': ['delete bai', 'ba duplikasi', 'alista', 'salah input'],
+  'Alista - Material & Reservasi': ['input material', 'reservasi id', 'reservasi double'],
+  'Alista - PIC Controller': ['pic controler', 'pic kontroler']
 };
 
 // ===== Telegram Bot =====
@@ -140,8 +141,7 @@ bot.on('message', async msg => {
       await newTicket.save();
 
       await bot.sendMessage(chatId,
-        `✅ <b>Tiket Diterima!</b>\n\nTerima kasih, laporan Anda dicatat dengan kode:\n<code>${ticketCode}</code>\n\nGunakan <code>#lacak ${ticketCode}</code> untuk cek status.`,
-        { parse_mode: 'HTML', reply_to_message_id: messageId }
+        `✅ <b>Tiket Diterima!</b>\n\nTerima kasih, laporan Anda dicatat dengan kode:\n<code>${ticketCode}</code>\n\nGunakan <code>#lacak ${ticketCode}</code> untuk cek status.`, { parse_mode: 'HTML', reply_to_message_id: messageId }
       );
 
       console.log('===== NEW TICKET =====', { ticketCode, chatId, usernameRaw, extractedText, photoUrl });
@@ -185,15 +185,15 @@ bot.onText(/#lacak (.+)/, async (msg, match) => {
 
     const statusMessage = ticket.status === 'Done' ? `✅ ${ticket.status}` : `🟡 ${ticket.status}`;
 
-    let statusText = `🔍 Status Tiket \`${escapeMarkdownV2(ticket.ticketCode)}\`\n`+
-                     `Status: ${escapeMarkdownV2(statusMessage)}\n`+
-                     `Kendala: \`${escapeMarkdownV2(ticket.text)}\`\n`+
-                     `Grup: ${escapeMarkdownV2(ticket.groupName)}\n`+
-                     `Dilaporkan pada: ${escapeMarkdownV2(createdTanggal)}, ${escapeMarkdownV2(createdWaktu)}\n`;
+    let statusText = `🔍 Status Tiket \`${escapeMarkdownV2(ticket.ticketCode)}\`\n` +
+      `Status: ${escapeMarkdownV2(statusMessage)}\n` +
+      `Kendala: \`${escapeMarkdownV2(ticket.text)}\`\n` +
+      `Grup: ${escapeMarkdownV2(ticket.groupName)}\n` +
+      `Dilaporkan pada: ${escapeMarkdownV2(createdTanggal)}, ${escapeMarkdownV2(createdWaktu)}\n`;
 
-    if(ticket.status === 'Done') {
+    if (ticket.status === 'Done') {
       statusText += `Selesai pada: ${escapeMarkdownV2(completedTanggal)}, ${escapeMarkdownV2(completedWaktu)}\n`;
-      if(ticket.adminMessage) statusText += `📌 Catatan dari IT TA: ${escapeMarkdownV2(ticket.adminMessage)}\n`;
+      if (ticket.adminMessage) statusText += `📌 Catatan dari IT TA: ${escapeMarkdownV2(ticket.adminMessage)}\n`;
     }
 
     await bot.sendMessage(chatId, statusText, { parse_mode: 'MarkdownV2', reply_to_message_id: messageId });
@@ -211,21 +211,46 @@ app.get('/api/tickets', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
-    const skip = (page-1)*limit;
+    const skip = (page - 1) * limit;
 
     const filters = {};
-    if (req.query.status && req.query.status !== 'all') filters.status = req.query.status;
+
+    // --- PERUBAHAN PADA FILTER STATUS ---
+    if (req.query.status && req.query.status !== 'all') {
+      // Cek apakah query status mengandung koma (,)
+      if (req.query.status.includes(',')) {
+        // Jika ya, pecah string menjadi array, lalu gunakan operator $in
+        filters.status = { $in: req.query.status.split(',') };
+      } else {
+        // Jika tidak, perlakukan seperti biasa
+        filters.status = req.query.status;
+      }
+    }
+    // --- AKHIR PERUBAHAN ---
+
     if (req.query.pic && req.query.pic !== 'all') filters.pic = req.query.pic;
     if (req.query.startDate) filters.createdAt = { ...filters.createdAt, $gte: new Date(req.query.startDate) };
     if (req.query.endDate) {
       const endOfDay = new Date(req.query.endDate);
-      endOfDay.setHours(23,59,59,999);
+      endOfDay.setHours(23, 59, 59, 999);
       filters.createdAt = { ...filters.createdAt, $lte: endOfDay };
     }
 
+    // ===== Penambahan Filter Pencarian Umum =====
+    if (req.query.search) {
+      const searchRegex = { $regex: req.query.search, $options: 'i' }; // 'i' = case-insensitive
+      filters.$or = [
+        { ticketCode: searchRegex },
+        { text: searchRegex },
+        { username: searchRegex },
+        { groupName: searchRegex }
+      ];
+    }
+    // ===========================================
+
     const tickets = await Ticket.find(filters).sort({ createdAt: -1 }).skip(skip).limit(limit);
     const totalTickets = await Ticket.countDocuments(filters);
-    const totalPages = Math.ceil(totalTickets/limit);
+    const totalPages = Math.ceil(totalTickets / limit);
     const allFilteredTickets = await Ticket.find(filters);
 
     // ===== Statistik =====
@@ -242,32 +267,32 @@ app.get('/api/tickets', async (req, res) => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterdayStart = new Date(new Date().setDate(now.getDate() - 1));
-    yesterdayStart.setHours(0,0,0,0);
+    yesterdayStart.setHours(0, 0, 0, 0);
 
     const finalStats = allFilteredTickets.reduce((acc, ticket) => {
-      if(ticket.status === 'Done') acc.totalSelesai++;
+      if (ticket.status === 'Done') acc.totalSelesai++;
       else acc.totalDiproses++;
 
       const picKey = ticket.pic || 'Belum Ditentukan';
       acc.picData[picKey] = (acc.picData[picKey] || 0) + 1;
 
-      const textLower = (ticket.text||'').toLowerCase();
+      const textLower = (ticket.text || '').toLowerCase();
       let matched = false;
-      for(const [category, keywords] of Object.entries(CASE_KEYWORDS)){
-        if(keywords.some(k => textLower.includes(k))){
+      for (const [category, keywords] of Object.entries(CASE_KEYWORDS)) {
+        if (keywords.some(k => textLower.includes(k))) {
           acc.caseData[category] = (acc.caseData[category] || 0) + 1;
           matched = true;
           break;
         }
       }
-      if(!matched) acc.caseData['Lainnya'] = (acc.caseData['Lainnya'] || 0) + 1;
+      if (!matched) acc.caseData['Lainnya'] = (acc.caseData['Lainnya'] || 0) + 1;
 
       const ticketDate = new Date(ticket.createdAt);
-      if(ticketDate >= todayStart){
-        if(ticket.status === 'Done') acc.statsToday.selesai++;
+      if (ticketDate >= todayStart) {
+        if (ticket.status === 'Done') acc.statsToday.selesai++;
         else acc.statsToday.diproses++;
-      } else if(ticketDate >= yesterdayStart && ticketDate < todayStart){
-        if(ticket.status === 'Done') acc.statsYesterday.selesai++;
+      } else if (ticketDate >= yesterdayStart && ticketDate < todayStart) {
+        if (ticket.status === 'Done') acc.statsYesterday.selesai++;
         else acc.statsYesterday.diproses++;
       }
 
@@ -275,7 +300,7 @@ app.get('/api/tickets', async (req, res) => {
     }, initialStats);
 
     res.json({ tickets, totalPages, currentPage: page, stats: finalStats });
-  } catch(err){
+  } catch (err) {
     console.error('❌ Error saat mengambil data tiket:', err);
     res.status(500).json({ message: 'Gagal memuat tiket.' });
   }
@@ -287,10 +312,10 @@ app.post('/api/tickets/:id/reply', upload.single('photo'), async (req, res) => {
     const ticket = await Ticket.findById(req.params.id);
     const { balasan } = req.body;
 
-    if(!balasan || !ticket) return res.status(400).json({ message: 'Input tidak valid atau tiket tidak ditemukan.' });
+    if (!balasan || !ticket) return res.status(400).json({ message: 'Input tidak valid atau tiket tidak ditemukan.' });
 
     ticket.adminMessage = balasan;
-    ticket.status = 'Done'; 
+    ticket.status = 'Done';
     ticket.completedAt = new Date();
 
     if (req.file) {
@@ -300,7 +325,7 @@ app.post('/api/tickets/:id/reply', upload.single('photo'), async (req, res) => {
           parse_mode: 'HTML',
           reply_to_message_id: ticket.messageId
         });
-      } catch(err) {
+      } catch (err) {
         console.error('❌ Gagal mengirim balasan dengan foto:', err);
       }
     } else {
@@ -309,14 +334,14 @@ app.post('/api/tickets/:id/reply', upload.single('photo'), async (req, res) => {
           parse_mode: 'HTML',
           reply_to_message_id: ticket.messageId
         });
-      } catch(err) {
+      } catch (err) {
         console.error('❌ Gagal mengirim balasan ke Telegram:', err);
       }
     }
 
     await ticket.save();
     res.json({ success: true, message: 'Balasan terkirim dan tiket diperbarui.' });
-  } catch(err){
+  } catch (err) {
     console.error('❌ Gagal menyelesaikan tiket:', err);
     res.status(500).json({ message: 'Gagal memperbarui tiket.' });
   }
@@ -326,11 +351,11 @@ app.post('/api/tickets/:id/reply', upload.single('photo'), async (req, res) => {
 app.patch('/api/tickets/:id/set-pic', async (req, res) => {
   try {
     const { pic } = req.body;
-    if(!PIC_LIST.includes(pic) && pic !== 'Belum Ditentukan') return res.status(400).json({ message: 'PIC tidak valid.' });
-    
+    if (!PIC_LIST.includes(pic) && pic !== 'BelumDitentukan') return res.status(400).json({ message: 'PIC tidak valid.' });
+
     const ticket = await Ticket.findByIdAndUpdate(req.params.id, { pic }, { new: true });
     res.json(ticket);
-  } catch(err){
+  } catch (err) {
     console.error('❌ Gagal set PIC:', err);
     res.status(500).json({ message: 'Gagal menetapkan PIC.' });
   }
@@ -340,20 +365,13 @@ app.patch('/api/tickets/:id/set-pic', async (req, res) => {
 app.patch('/api/tickets/:id/set-status', async (req, res) => {
   try {
     const { status } = req.body;
-
-    // Pakai enum dari schema / STATUS_LIST
-    const validStatus = ['Diproses', 'On Hold', 'Menunggu Approval', 'Done'];
-    if (!validStatus.includes(status)) {
-      return res.status(400).json({ message: 'Status tidak valid.' });
-    }
+    if (!STATUS_LIST.includes(status)) return res.status(400).json({ message: 'Status tidak valid.' });
 
     const ticket = await Ticket.findById(req.params.id);
     if (!ticket) return res.status(404).json({ message: 'Tiket tidak ditemukan.' });
 
     ticket.status = status;
-    if (status === 'Done') ticket.completedAt = new Date();
-    else ticket.completedAt = null;
-
+    ticket.completedAt = status === 'Done' ? new Date() : null;
     await ticket.save();
 
     try {
@@ -371,7 +389,6 @@ app.patch('/api/tickets/:id/set-status', async (req, res) => {
     res.status(500).json({ message: 'Gagal memperbarui status tiket.' });
   }
 });
-
 
 // Export Excel
 app.get('/api/tickets/export', async (req, res) => {
@@ -399,7 +416,7 @@ app.get('/api/tickets/export', async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
-  } catch(err){
+  } catch (err) {
     console.error('❌ Gagal mengekspor data:', err);
     res.status(500).send('Gagal mengekspor data ke Excel.');
   }

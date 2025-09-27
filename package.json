@@ -15,6 +15,7 @@
     "concurrently": "^9.2.1"
   },
   "dependencies": {
+    "chartjs-plugin-datalabels": "^2.2.0",
     "jsonwebtoken": "^9.0.2"
   }
 }
