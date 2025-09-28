@@ -17,6 +17,8 @@
   "dependencies": {
     "chartjs-plugin-datalabels": "^2.2.0",
     "jsonwebtoken": "^9.0.2",
-    "p-queue": "^8.1.1"
+    "p-queue": "^8.1.1",
+    "react-slick": "^0.31.0",
+    "slick-carousel": "^1.8.1"
   }
 }

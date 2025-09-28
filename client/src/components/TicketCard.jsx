@@ -25,7 +25,6 @@ const CONFIG = {
   }
 };
 
-// --- STATUS DROPDOWN DAN MAPPING KE BACKEND ---
 const STATUS_LIST = ['Diproses', 'On Hold', 'Menunggu Approval', 'Done'];
 
 const Icon = ({ path, color, size = '1.2em' }) => (
@@ -36,9 +35,12 @@ const Icon = ({ path, color, size = '1.2em' }) => (
   </svg>
 );
 
-function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick }) {
+// --- PERUBAHAN: Hapus prop onTextClick karena modal ditangani di sini ---
+function TicketCard({ ticket, picList, refreshData, onImageClick }) {
   const [statusReason, setStatusReason] = useState(ticket.adminMessage || '');
   const [selectedFile, setSelectedFile] = useState(null);
+  // --- PERUBAHAN: State baru untuk kontrol modal ---
+  const [isTextModalOpen, setIsTextModalOpen] = useState(false);
 
   const statusKey = ticket.status.toLowerCase().replace(/ /g, '-');
   const statusColors = CONFIG.COLORS[statusKey] || { bg: '#f3f4f6', text: '#4b5563' };
@@ -103,150 +105,172 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
   const isDoneAction = ticket.status.toLowerCase() !== 'done';
 
   return (
-    <div style={{
-      backgroundColor: '#fff',
-      borderRadius: '16px',
-      boxShadow: '0 4px 8px rgba(0,0,0,0.02),0 10px 20px rgba(0,0,0,0.06)',
-      border: `1px solid ${CONFIG.COLORS.border}`,
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      position: 'relative',
-      transition: 'all 0.3s ease-in-out'
-    }}>
-
-      {/* Tombol lampiran */}
-      {ticket.photoUrl && (
-        <button
-          onClick={() => onImageClick(ticket.photoUrl)}
-          style={{
-            position: 'absolute', top: '-16px', right: '16px',
-            backgroundColor: 'white', border: `1px solid ${CONFIG.COLORS.border}`,
-            borderRadius: '50%', width: '40px', height: '40px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-          }}>
-          <FaPaperclip size="1.1em" color={CONFIG.COLORS.text.label} />
-        </button>
-      )}
-
-      {/* Header */}
+    // --- PERUBAHAN: Menggunakan React Fragment agar bisa menampung modal ---
+    <>
       <div style={{
-        padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        borderBottom: `1px solid ${CONFIG.COLORS.border}`, backgroundColor: statusColors.bg,
-        borderTopLeftRadius: '16px', borderTopRightRadius: '16px'
+        backgroundColor: '#fff',
+        borderRadius: '16px',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.02),0 10px 20px rgba(0,0,0,0.06)',
+        border: `1px solid ${CONFIG.COLORS.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        position: 'relative',
+        transition: 'all 0.3s ease-in-out'
       }}>
-        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: CONFIG.COLORS.text.primary }}>#{ticket.ticketCode}</span>
-        <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: statusColors.text, color: '#fff' }}>
-          {ticket.status.toUpperCase()}
-        </span>
-      </div>
 
-      {/* Body */}
-      <div style={{ padding: '20px', lineHeight: 1.6, flexGrow: 1 }}>
-        <p style={{ margin: 0, fontSize: '1rem', color: CONFIG.COLORS.text.primary, wordBreak: 'break-word' }}>
-          {isLongText ? words.slice(0, TRUNCATE_WORDS).join(' ') + '...' : ticket.text}
-        </p>
-        {isLongText && <button onClick={() => onTextClick(ticket)} style={{ all: 'unset', cursor: 'pointer', color: CONFIG.COLORS.text.link, fontWeight: '600', fontSize: '0.9rem', marginTop: '8px' }}>Lihat Detail Kendala</button>}
+        {/* Tombol lampiran */}
+        {ticket.photoUrl && (
+          <button
+            onClick={() => onImageClick(ticket.photoUrl)}
+            style={{
+              position: 'absolute', top: '-16px', right: '16px',
+              backgroundColor: 'white', border: `1px solid ${CONFIG.COLORS.border}`,
+              borderRadius: '50%', width: '40px', height: '40px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}>
+            <FaPaperclip size="1.1em" color={CONFIG.COLORS.text.label} />
+          </button>
+        )}
 
-        {ticket.adminMessage && ticket.status.toLowerCase() !== 'done' && (
-          <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#fffbe6', borderLeft: '3px solid #facc15', borderRadius: '4px', fontSize: '0.9rem', color: CONFIG.COLORS.text.secondary }}>
-            <strong>Admin Note:</strong> {ticket.adminMessage}
+        {/* Header */}
+        <div style={{
+          padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          borderBottom: `1px solid ${CONFIG.COLORS.border}`, backgroundColor: statusColors.bg,
+          borderTopLeftRadius: '16px', borderTopRightRadius: '16px'
+        }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: '700', color: CONFIG.COLORS.text.primary }}>#{ticket.ticketCode}</span>
+          <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600', backgroundColor: statusColors.text, color: '#fff' }}>
+            {ticket.status.toUpperCase()}
+          </span>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px', lineHeight: 1.6, flexGrow: 1 }}>
+          <p style={{ margin: 0, fontSize: '1rem', color: CONFIG.COLORS.text.primary, wordBreak: 'break-word' }}>
+            {isLongText ? words.slice(0, TRUNCATE_WORDS).join(' ') + '...' : ticket.text}
+          </p>
+          {/* --- PERUBAHAN: Tombol ini sekarang membuka modal internal --- */}
+          {isLongText && <button onClick={() => setIsTextModalOpen(true)} style={{ all: 'unset', cursor: 'pointer', color: CONFIG.COLORS.text.link, fontWeight: '600', fontSize: '0.9rem', marginTop: '8px' }}>Lihat Detail Kendala</button>}
+
+          {ticket.adminMessage && ticket.status.toLowerCase() !== 'done' && (
+            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#fffbe6', borderLeft: '3px solid #facc15', borderRadius: '4px', fontSize: '0.9rem', color: CONFIG.COLORS.text.secondary }}>
+              <strong>Admin Note:</strong> {ticket.adminMessage}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '20px', borderTop: `1px solid ${CONFIG.COLORS.border}`, backgroundColor: '#fdfdfd' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {/* Pelapor */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: CONFIG.COLORS.text.label, fontSize: '0.8rem', marginBottom: '4px' }}>
+                <Icon path={CONFIG.ICONS.reporter} /><span>PELAPOR</span>
+              </div>
+              <div style={{ fontWeight: '600', color: CONFIG.COLORS.text.primary, fontSize: '1rem' }}>@{ticket.username || 'Anonim'}</div>
+              <div style={{ fontSize: '0.8rem', color: CONFIG.COLORS.text.secondary, wordBreak: 'break-all' }}>
+                {ticket.platform === 'WhatsApp' ? `HP: ${ticket.telegramUserId}` : `ID: ${ticket.telegramUserId}`}
+              </div>
+            </div>
+
+            {/* PIC + Platform */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', color: CONFIG.COLORS.text.label, fontSize: '0.8rem', marginBottom: '4px' }}>
+                <Icon path={CONFIG.ICONS.pic} /><span>PIC</span>
+              </div>
+              <div style={{ fontWeight: '600', color: CONFIG.COLORS.text.primary, fontSize: '1rem', textAlign: 'right' }}>
+                {ticket.pic === 'Belum Ditentukan' ? 'Belum Ditentukan' : ticket.pic.toUpperCase()}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', fontSize: '0.8rem', color: CONFIG.COLORS.text.secondary }}>
+                {ticket.platform === 'WhatsApp'
+                  ? <FaWhatsapp title="Via WhatsApp" style={{ color: '#25D366' }} />
+                  : <FaTelegramPlane title="Via Telegram" style={{ color: '#0088cc' }} />}
+                <span>{ticket.groupName || ticket.platform}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <div style={{ marginTop: '15px', borderTop: `1px dashed ${CONFIG.COLORS.border}`, paddingTop: '15px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: CONFIG.COLORS.text.label, fontSize: '0.8rem', marginBottom: '4px' }}>
+              <Icon path={CONFIG.ICONS.clock} /><span>DILAPORKAN PADA</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: CONFIG.COLORS.text.primary }}>
+              <span>{reportedDate}</span>
+              <Icon path={CONFIG.ICONS.arrow} color={CONFIG.COLORS.text.secondary} size="1em" />
+              {completedDate
+                ? <span style={{ fontWeight: '600', color: CONFIG.COLORS.done?.text || CONFIG.COLORS.text.primary }}>Selesai {completedDate}</span>
+                : <em style={{ color: CONFIG.COLORS.text.secondary }}>Masih Diproses</em>}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Area */}
+        {isDoneAction && (
+          <div style={{ marginTop: 'auto', padding: '15px 20px 20px', backgroundColor: CONFIG.COLORS.actionBg, borderTop: `1px solid ${CONFIG.COLORS.border}`, borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+            <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
+              <select className="form-select form-select-sm" value={STATUS_LIST.includes(ticket.status) ? ticket.status : 'Diproses'} onChange={handleStatusChange} style={{ flexGrow: 1 }}>
+                {STATUS_LIST.filter(s => s !== 'Done').map(status => (<option key={status} value={status}>{status}</option>))}
+              </select>
+              <select className="form-select form-select-sm" value={ticket.pic || 'Belum Ditentukan'} onChange={handleSetPic} style={{ flexGrow: 1 }}>
+                <option value="Belum Ditentukan">Pilih PIC...</option>
+                {picList.filter(pic => pic !== 'Belum Ditentukan').map(pic => (<option key={pic} value={pic}>{pic.toUpperCase()}</option>))}
+              </select>
+            </div>
+            <div style={{ marginBottom: '10px' }}>
+              <textarea value={statusReason} onChange={(e) => setStatusReason(e.target.value)} placeholder="Tulis alasan On Hold atau balasan final..." className="form-control form-control-sm" rows="2" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input type="file" id={`file-${ticket._id}`} style={{ display: 'none' }} onChange={(e) => setSelectedFile(e.target.files[0])} accept="image/*" />
+                <label htmlFor={`file-${ticket._id}`} className="btn btn-outline-secondary btn-sm" title="Lampirkan Gambar">
+                  <FaPaperclip />
+                </label>
+                {selectedFile && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem' }}>
+                    <span className="text-primary">{selectedFile.name.substring(0, 15)}...</span>
+                    <FaTimes size="0.9em" className='text-danger' style={{ cursor: 'pointer' }} onClick={() => setSelectedFile(null)} title="Hapus Lampiran" />
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {ticket.status.toLowerCase() !== 'done' &&
+                  <button type="button" onClick={handleStatusChange} className="btn btn-secondary btn-sm">Update Status</button>}
+                <button type="button" onClick={handleReply} className="btn btn-primary btn-sm" disabled={!statusReason.trim() && !selectedFile} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon path={CONFIG.ICONS.send} color="#fff" size="1em" /> Selesaikan & Kirim
+                </button>
+              </div>
+            </div>
+            <small className='d-block text-muted mt-2' style={{ fontSize: '0.7rem' }}>*Tekan "Selesaikan & Kirim" untuk mengubah status menjadi DONE dan mengirim balasan ke user.</small>
           </div>
         )}
       </div>
 
-      {/* Footer */}
-      <div style={{ padding: '20px', borderTop: `1px solid ${CONFIG.COLORS.border}`, backgroundColor: '#fdfdfd' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          {/* Pelapor */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: CONFIG.COLORS.text.label, fontSize: '0.8rem', marginBottom: '4px' }}>
-              <Icon path={CONFIG.ICONS.reporter} /><span>PELAPOR</span>
+      {/* --- PERUBAHAN: JSX untuk Modal Detail Teks --- */}
+      {isTextModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }} onClick={() => setIsTextModalOpen(false)}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '8px',
+            width: '90%', maxWidth: '600px',
+            padding: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '16px', borderBottom: `1px solid ${CONFIG.COLORS.border}`}}>
+              <h5 style={{ margin: 0, color: CONFIG.COLORS.text.primary }}>Detail Kendala #{ticket.ticketCode}</h5>
+              <button onClick={() => setIsTextModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: CONFIG.COLORS.text.secondary }}>&times;</button>
             </div>
-            <div style={{ fontWeight: '600', color: CONFIG.COLORS.text.primary, fontSize: '1rem' }}>@{ticket.username || 'Anonim'}</div>
-            <div style={{ fontSize: '0.8rem', color: CONFIG.COLORS.text.secondary, wordBreak: 'break-all' }}>
-              {ticket.platform === 'WhatsApp' ? `HP: ${ticket.telegramUserId}` : `ID: ${ticket.telegramUserId}`}
-            </div>
+            <p style={{ whiteSpace: 'pre-wrap', color: CONFIG.COLORS.text.secondary, maxHeight: '60vh', overflowY: 'auto' }}>
+              {ticket.text}
+            </p>
           </div>
-
-          {/* PIC + Platform */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', color: CONFIG.COLORS.text.label, fontSize: '0.8rem', marginBottom: '4px' }}>
-              <Icon path={CONFIG.ICONS.pic} /><span>PIC</span>
-            </div>
-            <div style={{ fontWeight: '600', color: CONFIG.COLORS.text.primary, fontSize: '1rem', textAlign: 'right' }}>
-              {ticket.pic === 'Belum Ditentukan' ? 'Belum Ditentukan' : ticket.pic.toUpperCase()}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', fontSize: '0.8rem', color: CONFIG.COLORS.text.secondary }}>
-              {ticket.platform === 'WhatsApp'
-                ? <FaWhatsapp title="Via WhatsApp" style={{ color: '#25D366' }} />
-                : <FaTelegramPlane title="Via Telegram" style={{ color: '#0088cc' }} />}
-              <span>{ticket.groupName || ticket.platform}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Timeline */}
-        <div style={{ marginTop: '15px', borderTop: `1px dashed ${CONFIG.COLORS.border}`, paddingTop: '15px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: CONFIG.COLORS.text.label, fontSize: '0.8rem', marginBottom: '4px' }}>
-            <Icon path={CONFIG.ICONS.clock} /><span>DILAPORKAN PADA</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: CONFIG.COLORS.text.primary }}>
-            <span>{reportedDate}</span>
-            <Icon path={CONFIG.ICONS.arrow} color={CONFIG.COLORS.text.secondary} size="1em" />
-            {completedDate
-              ? <span style={{ fontWeight: '600', color: CONFIG.COLORS.done?.text || CONFIG.COLORS.text.primary }}>Selesai {completedDate}</span>
-              : <em style={{ color: CONFIG.COLORS.text.secondary }}>Masih Diproses</em>}
-          </div>
-        </div>
-      </div>
-
-      {/* Action Area */}
-      {isDoneAction && (
-        <div style={{ marginTop: 'auto', padding: '15px 20px 20px', backgroundColor: CONFIG.COLORS.actionBg, borderTop: `1px solid ${CONFIG.COLORS.border}`, borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
-          <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-            <select className="form-select form-select-sm" value={STATUS_LIST.includes(ticket.status) ? ticket.status : 'Diproses'} onChange={handleStatusChange} style={{ flexGrow: 1 }}>
-              {STATUS_LIST.filter(s => s !== 'Done').map(status => (<option key={status} value={status}>{status}</option>))}
-            </select>
-
-            <select className="form-select form-select-sm" value={ticket.pic || 'Belum Ditentukan'} onChange={handleSetPic} style={{ flexGrow: 1 }}>
-              <option value="Belum Ditentukan">Pilih PIC...</option>
-              {picList.filter(pic => pic !== 'Belum Ditentukan').map(pic => (<option key={pic} value={pic}>{pic.toUpperCase()}</option>))}
-            </select>
-          </div>
-
-          <div style={{ marginBottom: '10px' }}>
-            <label className='form-label small fw-semibold text-muted mb-1'>Pesan Update (On Hold/Approval) / Balasan Final (Done)</label>
-            <textarea value={statusReason} onChange={(e) => setStatusReason(e.target.value)} placeholder="Tulis alasan On Hold atau balasan final..." className="form-control form-control-sm" rows="2" />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input type="file" id={`file-${ticket._id}`} style={{ display: 'none' }} onChange={(e) => setSelectedFile(e.target.files[0])} accept="image/*" />
-              <label htmlFor={`file-${ticket._id}`} className="btn btn-outline-secondary btn-sm" title="Lampirkan Gambar">
-                <FaPaperclip />
-              </label>
-              {selectedFile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem' }}>
-                  <span className="text-primary">{selectedFile.name.substring(0, 15)}...</span>
-                  <FaTimes size="0.9em" className='text-danger' style={{ cursor: 'pointer' }} onClick={() => setSelectedFile(null)} title="Hapus Lampiran" />
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {ticket.status.toLowerCase() !== 'done' &&
-                <button type="button" onClick={handleStatusChange} className="btn btn-secondary btn-sm">Update Status</button>}
-              <button type="button" onClick={handleReply} className="btn btn-primary btn-sm" disabled={!statusReason.trim() && !selectedFile} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Icon path={CONFIG.ICONS.send} color="#fff" size="1em" /> Selesaikan & Kirim
-              </button>
-            </div>
-          </div>
-          <small className='d-block text-muted mt-2' style={{ fontSize: '0.7rem' }}>*Tekan "Selesaikan & Kirim" untuk mengubah status menjadi DONE dan mengirim balasan ke user.</small>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

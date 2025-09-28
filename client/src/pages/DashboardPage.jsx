@@ -17,28 +17,36 @@ import PlatformChart from '../components/PlatformChart';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 // **********************************************
-// * CSS INLINE FOR CLEANER LAYOUT AND APPEARANCE
+// * CSS INLINE GAYA MODERN
 // **********************************************
+// Style untuk slider chart
 const dashboardWrapperStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+  display: 'flex',
+  flexWrap: 'nowrap',
+  overflowX: 'auto',
   gap: '1.5rem',
+  padding: '0.5rem 0 1.5rem 0.5rem', // Padding untuk bayangan & scrollbar
   marginBottom: '2rem',
 };
 
+// Style untuk card di dalam slider chart
 const chartBoxStyle = {
   backgroundColor: 'white',
   padding: '1.25rem',
-  borderRadius: '0.75rem', 
-  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05)',
-  height: '100%',
+  borderRadius: '1rem', // Sudut lebih tumpul
+  boxShadow: '0 8px 25px -8px rgba(0, 0, 0, 0.1)',
   display: 'flex',
   flexDirection: 'column',
+  flex: '0 0 300px',
+  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
 };
 
-const chartBoxLargeStyle = {
-  ...chartBoxStyle,
-  gridColumn: 'span 2', 
+// --- PERUBAHAN BARU: Style untuk Grid Tiket Keren ---
+const ticketGridStyle = {
+  display: 'grid',
+  // Membuat kolom otomatis, min 350px, maks 1fr (semua ruang yg tersedia)
+  gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+  gap: '1.5rem', // Jarak antar kartu tiket
 };
 
 const filterGroupStyle = {
@@ -53,8 +61,6 @@ function DashboardPage() {
   const [tickets, setTickets] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Filter & state UI
   const [activeView, setActiveView] = useState('processed');
   const [picFilter, setPicFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -62,21 +68,17 @@ function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  // Modal preview
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState('');
   const [showTextModal, setShowTextModal] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [selectedTextUser, setSelectedTextUser] = useState('');
 
-  // Logout
   const handleLogout = () => {
     localStorage.removeItem('token');
     window.location.href = '/login';
   };
 
-  // Modal Gambar (versi dengan handle WhatsApp khusus)
   const handleShowImage = (imageUrl, platform) => {
     if (platform === 'WhatsApp' && imageUrl === 'MEDIA_ATTACHED_VIEW_IN_WA') {
       alert('⚠️ Lampiran WhatsApp: Foto tidak dapat ditampilkan langsung. Mohon cek pesan asli di WhatsApp Web.');
@@ -87,7 +89,6 @@ function DashboardPage() {
   };
   const handleCloseImage = () => setShowImageModal(false);
 
-  // Modal Text
   const handleShowTextModal = (ticket) => {
     setSelectedText(ticket.text);
     setSelectedTextUser(ticket.username);
@@ -95,17 +96,14 @@ function DashboardPage() {
   };
   const handleCloseTextModal = () => setShowTextModal(false);
 
-  // Ambil data dari backend
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      let statusForApi;
+      let statusForApi = 'all';
       if (activeView === 'processed') {
         statusForApi = 'Diproses,On Hold,Menunggu Approval';
       } else if (activeView === 'completed') {
         statusForApi = 'Done';
-      } else {
-        statusForApi = 'all';
       }
 
       const token = localStorage.getItem('token');
@@ -129,19 +127,12 @@ function DashboardPage() {
 
       const updatedStats = {
         ...res.data.stats,
-        platformData: res.data.stats.platformData || {
-          Telegram: 0,
-          WhatsApp: 0
-        },
+        platformData: res.data.stats.platformData || { Telegram: 0, WhatsApp: 0 },
       };
-
       setStats(updatedStats);
-
     } catch (err) {
       console.error('Gagal fetch data:', err);
-      if (err.response && err.response.status === 401) {
-        handleLogout();
-      }
+      if (err.response && err.response.status === 401) handleLogout();
     } finally {
       setLoading(false);
     }
@@ -151,7 +142,6 @@ function DashboardPage() {
     fetchData();
   }, [fetchData]);
 
-  // Reset filter
   const handleResetFilters = () => {
     setPicFilter('all');
     setStartDate('');
@@ -194,12 +184,32 @@ function DashboardPage() {
   return (
     <>
       <Toaster position="top-center" />
-      <div style={{ backgroundColor: '#f4f7f9', minHeight: '100vh', padding: '2rem 0' }}>
+      {/* --- PERUBAHAN BARU: Menambahkan CSS Global untuk efek & scrollbar --- */}
+      <style>{`
+        body {
+          background-color: #f8fafc; /* Warna background lebih soft */
+        }
+        .chart-slider::-webkit-scrollbar { height: 8px; }
+        .chart-slider::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .chart-slider::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .chart-slider::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        /* Efek hover untuk kartu tiket */
+        .ticket-card-wrapper:hover {
+          transform: translateY(-5px) scale(1.02); /* Sedikit naik dan membesar */
+          box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.15) !important; /* Bayangan lebih dramatis */
+          z-index: 10;
+        }
+        .ticket-card-wrapper {
+          transition: transform 0.3s ease, box-shadow 0.3s ease; /* Transisi super halus */
+        }
+      `}</style>
+      <div style={{ minHeight: '100vh', padding: '2rem 0' }}>
         <div className="container-fluid container-lg">
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
             <div>
-              <h1 className="h2 mb-1 fw-bold text-primary">📊 Operationals Dashboard</h1>
+              <h1 className="h2 mb-1 fw-bold" style={{color: '#1e293b'}}>📊 Operationals Dashboard</h1>
               <p className="mb-0 text-muted">Akses real-time dan kelola semua kendala dari berbagai platform.</p>
             </div>
             <button className="btn btn-outline-danger d-flex align-items-center gap-2" onClick={handleLogout}>
@@ -208,10 +218,10 @@ function DashboardPage() {
           </div>
 
           {/* Welcome Banner */}
-          <div className="alert alert-primary d-flex align-items-center p-3 mb-4 border-0 shadow-sm" role="alert" style={{ backgroundColor: '#eef2ff', borderRadius: '0.75rem' }}>
-            <FaBullhorn className="me-3 text-primary" style={{ fontSize: '1.8rem', opacity: '0.8' }} />
+          <div className="alert d-flex align-items-center p-3 mb-4 border-0 shadow-sm" role="alert" style={{ backgroundColor: '#eef2ff', borderRadius: '1rem' }}>
+            <FaBullhorn className="me-3" style={{ fontSize: '1.8rem', opacity: '0.8', color: '#4338ca' }} />
             <div>
-              <h5 className="alert-heading mb-0 fw-semibold">Selamat Bekerja!</h5>
+              <h5 className="alert-heading mb-0 fw-semibold" style={{color: '#312e81'}}>Selamat Bekerja!</h5>
               <p className="mb-0 text-muted">Mari capai target hari ini. Total Tiket: {stats.totalDiproses + stats.totalSelesai}</p>
             </div>
           </div>
@@ -228,36 +238,22 @@ function DashboardPage() {
             </button>
           </div>
 
-          {/* Dashboard Wrapper */}
-          <div style={dashboardWrapperStyle}>
-            <div style={chartBoxStyle}>
-              <h6 className="fw-bold text-secondary mb-3">STATUS TICKET</h6>
-              <div className='flex-grow-1'><StatusChart data={{ totalDiproses: stats.totalDiproses, totalSelesai: stats.totalSelesai }} /></div>
-            </div>
-            <div style={chartBoxStyle}>
-              <h6 className="fw-bold text-secondary mb-3">TIKET PER PIC</h6>
-              <div className='flex-grow-1'><PicChart data={stats.picData} /></div>
-            </div>
-            <div style={chartBoxStyle}>
-              <h6 className="fw-bold text-secondary mb-3">DISTRIBUSI PLATFORM</h6>
-              {stats.platformData && Object.keys(stats.platformData).length > 0 ? (
-                <div className='flex-grow-1'><PlatformChart data={stats.platformData} /></div>
-              ) : (
-                <div className="alert alert-info text-center mt-3">Tidak ada data platform.</div>
-              )}
-            </div>
-            <div style={chartBoxStyle}>
-              <h6 className="fw-bold text-secondary mb-3">STATISTIK HARIAN</h6>
-              <div className='flex-grow-1'><DailyChart today={stats.statsToday} yesterday={stats.statsYesterday} /></div>
-            </div>
-            <div style={chartBoxLargeStyle}>
-              <h6 className="fw-bold text-secondary mb-3">CASE TERBANYAK</h6>
-              {stats.caseData && Object.keys(stats.caseData).length > 0 ? (
-                <div className='flex-grow-1'><CaseChart data={stats.caseData} /></div>
-              ) : (
-                <div className="alert alert-info text-center mt-3">Tidak ada data case.</div>
-              )}
-            </div>
+          {/* Dashboard Wrapper - Slider */}
+          <div style={dashboardWrapperStyle} className="chart-slider">
+            {[
+              { title: 'STATUS TICKET', component: <StatusChart data={{ totalDiproses: stats.totalDiproses, totalSelesai: stats.totalSelesai }} /> },
+              { title: 'TIKET PER PIC', component: <PicChart data={stats.picData} /> },
+              { title: 'DISTRIBUSI PLATFORM', component: <PlatformChart data={stats.platformData} />, condition: stats.platformData && Object.keys(stats.platformData).length > 0 },
+              { title: 'STATISTIK HARIAN', component: <DailyChart today={stats.statsToday} yesterday={stats.statsYesterday} /> },
+              { title: 'CASE TERBANYAK', component: <CaseChart data={stats.caseData} />, condition: stats.caseData && Object.keys(stats.caseData).length > 0 },
+            ].map((chart, index) => (
+              <div style={chartBoxStyle} key={index}>
+                <h6 className="fw-bold text-secondary mb-3 text-uppercase small">{chart.title}</h6>
+                <div className='flex-grow-1'>
+                  {chart.condition === false ? <div className="alert alert-light text-center mt-3">Tidak ada data.</div> : chart.component}
+                </div>
+              </div>
+            ))}
           </div>
           
           <hr className='my-5' />
@@ -265,120 +261,64 @@ function DashboardPage() {
           {/* Filter & Ticket List */}
           <div className="mt-4">
             {/* Tabs View */}
-            <div className="view-selector-wrapper d-flex justify-content-center border-bottom mb-4 pb-3">
+            <div className="d-flex justify-content-center border-bottom mb-4 pb-3">
               <ul className="nav nav-pills nav-fill gap-2 bg-white p-2 rounded-pill shadow-sm">
-                <li className="nav-item">
-                  <button
-                    className={`nav-link d-flex align-items-center justify-content-center gap-2 fw-semibold ${activeView === 'all' ? 'active shadow-sm' : ''}`}
-                    onClick={() => handleViewChange('all')}
-                  >
-                    <FaTicketAlt />
-                    Semua Tiket
-                    <span className="badge rounded-pill bg-secondary">
-                      {stats.totalDiproses + stats.totalSelesai}
-                    </span>
-                  </button>
-                </li>
-                <li className="nav-item">
-                  <button
-                    className={`nav-link d-flex align-items-center justify-content-center gap-2 fw-semibold ${activeView === 'processed' ? 'active shadow-sm' : ''}`}
-                    onClick={() => handleViewChange('processed')}
-                  >
-                    <FaSyncAlt />
-                    Tiket Diproses
-                    <span className="badge rounded-pill bg-warning text-dark">
-                      {stats.totalDiproses}
-                    </span>
-                  </button>
-                </li>
-                <li className="nav-item">
-                  <button
-                    className={`nav-link d-flex align-items-center justify-content-center gap-2 fw-semibold ${activeView === 'completed' ? 'active shadow-sm' : ''}`}
-                    onClick={() => handleViewChange('completed')}
-                  >
-                    <FaCheckCircle />
-                    Tiket Selesai
-                    <span className="badge rounded-pill bg-success">
-                      {stats.totalSelesai}
-                    </span>
-                  </button>
-                </li>
+                {[
+                  { view: 'all', label: 'Semua Tiket', icon: <FaTicketAlt />, count: stats.totalDiproses + stats.totalSelesai, badge: 'bg-secondary' },
+                  { view: 'processed', label: 'Tiket Diproses', icon: <FaSyncAlt />, count: stats.totalDiproses, badge: 'bg-warning text-dark' },
+                  { view: 'completed', label: 'Tiket Selesai', icon: <FaCheckCircle />, count: stats.totalSelesai, badge: 'bg-success' }
+                ].map(tab => (
+                  <li className="nav-item" key={tab.view}>
+                    <button
+                      className={`nav-link d-flex align-items-center justify-content-center gap-2 fw-semibold ${activeView === tab.view ? 'active shadow-sm' : ''}`}
+                      onClick={() => handleViewChange(tab.view)}
+                    >
+                      {tab.icon} {tab.label} <span className={`badge rounded-pill ${tab.badge}`}>{tab.count}</span>
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
 
             {/* Filter Panel */}
             <div className="filter-panel d-flex flex-wrap align-items-end gap-3 p-3 mb-4 bg-white shadow-sm rounded-lg">
+              {/* Konten filter tidak berubah, jadi saya persingkat di sini */}
               <div style={{...filterGroupStyle, flexGrow: 2}}>
                 <label className="form-label small fw-semibold text-muted mb-1">Cari Tiket (Kode, Deskripsi, User)</label>
                 <div className="input-group">
                   <span className="input-group-text"><FaSearch /></span>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    placeholder="Cari Kode/Text/User..."
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                  />
+                  <input type="text" className="form-control form-control-sm" placeholder="Cari..." value={searchQuery} onChange={handleSearchChange}/>
                 </div>
               </div>
-
               <div style={filterGroupStyle}>
                 <label className="form-label small fw-semibold text-muted mb-1">PIC</label>
-                <select
-                  className="form-select form-select-sm"
-                  value={picFilter}
-                  onChange={e => { setPicFilter(e.target.value); setCurrentPage(1); }}
-                >
+                <select className="form-select form-select-sm" value={picFilter} onChange={e => { setPicFilter(e.target.value); setCurrentPage(1); }}>
                   <option value="all">Semua PIC</option>
-                  {stats.picList && stats.picList.map(pic => (
-                    <option key={pic} value={pic}>
-                      {pic === 'BelumDitentukan' ? 'Belum Ditentukan' : pic.toUpperCase()}
-                    </option>
-                  ))}
+                  {stats.picList?.map(pic => <option key={pic} value={pic}>{pic === 'BelumDitentukan' ? 'Belum Ditentukan' : pic.toUpperCase()}</option>)}
                 </select>
               </div>
-
-              <div style={filterGroupStyle}>
-                <label className="form-label small fw-semibold text-muted mb-1">Dari Tanggal</label>
-                <input
-                  type="date"
-                  className="form-control form-control-sm"
-                  value={startDate}
-                  onChange={e => { setStartDate(e.target.value); setCurrentPage(1); }}
-                />
-              </div>
-
-              <div style={filterGroupStyle}>
-                <label className="form-label small fw-semibold text-muted mb-1">Sampai Tanggal</label>
-                <input
-                  type="date"
-                  className="form-control form-control-sm"
-                  value={endDate}
-                  onChange={e => { setEndDate(e.target.value); setCurrentPage(1); }}
-                />
-              </div>
-
+              <div style={filterGroupStyle}><label className="form-label small fw-semibold text-muted mb-1">Dari Tanggal</label><input type="date" className="form-control form-control-sm" value={startDate} onChange={e => { setStartDate(e.target.value); setCurrentPage(1); }}/></div>
+              <div style={filterGroupStyle}><label className="form-label small fw-semibold text-muted mb-1">Sampai Tanggal</label><input type="date" className="form-control form-control-sm" value={endDate} onChange={e => { setEndDate(e.target.value); setCurrentPage(1); }}/></div>
               <div className="filter-group d-flex gap-2 align-self-end">
-                <button className="btn btn-outline-secondary btn-sm" onClick={handleResetFilters}>Reset Filter</button>
-                <button className="btn btn-success btn-sm" onClick={handleExport}>
-                  <FaFileExcel className="me-1" /> Ekspor Data
-                </button>
+                <button className="btn btn-outline-secondary btn-sm" onClick={handleResetFilters}>Reset</button>
+                <button className="btn btn-success btn-sm" onClick={handleExport}><FaFileExcel className="me-1" /> Ekspor</button>
               </div>
             </div>
 
-            {/* Ticket List */}
-            <div className="ticket-list mt-3">
+            {/* --- PERUBAHAN BARU: Ticket List sekarang menggunakan Grid --- */}
+            <div style={ticketGridStyle}>
               {tickets.length > 0 ? tickets.map(ticket => (
-                <TicketCard
-                  key={ticket._id}
-                  ticket={ticket}
-                  picList={stats.picList}
-                  refreshData={fetchData}
-                  onImageClick={(url) => handleShowImage(url, ticket.platform)}
-                  onTextClick={handleShowTextModal}
-                />
+                <div key={ticket._id} className="ticket-card-wrapper">
+                  <TicketCard
+                    ticket={ticket}
+                    picList={stats.picList}
+                    refreshData={fetchData}
+                    onImageClick={(url) => handleShowImage(url, ticket.platform)}
+                    onTextClick={handleShowTextModal}
+                  />
+                </div>
               )) : (
-                <div className="alert alert-warning text-center">
+                <div className="alert alert-warning text-center" style={{gridColumn: '1 / -1'}}>
                   Tidak ada kendala yang cocok dengan filter.
                 </div>
               )}
@@ -386,43 +326,25 @@ function DashboardPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="pagination mt-3 d-flex justify-content-center gap-2">
-                <button
-                  className="btn btn-sm btn-secondary"
-                  onClick={() => setCurrentPage(p => p - 1)}
-                  disabled={currentPage === 1}
-                >
-                  Prev
-                </button>
+              <div className="pagination mt-5 d-flex justify-content-center gap-2">
+                <button className="btn btn-sm btn-secondary" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>Prev</button>
                 <span className="align-self-center">Halaman {currentPage} dari {totalPages}</span>
-                <button
-                  className="btn btn-sm btn-secondary"
-                  onClick={() => setCurrentPage(p => p + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </button>
+                <button className="btn btn-sm btn-secondary" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>Next</button>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Modal Preview Gambar */}
+      {/* Modal Preview Gambar & Teks */}
       <Modal show={showImageModal} onHide={handleCloseImage} centered size="lg">
         <Modal.Body style={{ padding: 0 }}>
           <img src={selectedImageUrl} alt="Detail Kendala" style={{ width: '100%', height: 'auto' }} />
         </Modal.Body>
       </Modal>
-
-      {/* Modal Preview Text */}
       <Modal show={showTextModal} onHide={handleCloseTextModal} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Detail dari @{selectedTextUser}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p style={{ whiteSpace: 'pre-wrap' }}>{selectedText}</p>
-        </Modal.Body>
+        <Modal.Header closeButton><Modal.Title>Detail dari @{selectedTextUser}</Modal.Title></Modal.Header>
+        <Modal.Body><p style={{ whiteSpace: 'pre-wrap' }}>{selectedText}</p></Modal.Body>
       </Modal>
     </>
   );
