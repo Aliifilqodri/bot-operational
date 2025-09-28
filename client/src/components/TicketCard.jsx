@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../api'; // axios instance yang sudah membawa token
 import toast from 'react-hot-toast';
+import { FaTelegramPlane, FaWhatsapp } from 'react-icons/fa'; // Ikon platform ditambahkan
 
 // --- CONFIG DESAIN ---
 const CONFIG = {
@@ -20,7 +21,6 @@ const CONFIG = {
     clock: "M10 18a8 8 0 100-16 8 8 0 000 16zm1-12H9v7h6v-2h-4V6z",
     send: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8",
     arrow: "M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3",
-    // PENAMBAHAN 1: Ikon untuk paperclip
     paperclip: "M6.5 7a3.5 3.5 0 0 0-3.5 3.5v9a3.5 3.5 0 0 0 3.5 3.5h11a3.5 3.5 0 0 0 3.5-3.5v-13a3.5 3.5 0 0 0-3.5-3.5h-13a.5.5 0 0 0 0 1h13a2.5 2.5 0 0 1 2.5 2.5v13a2.5 2.5 0 0 1-2.5 2.5h-11a2.5 2.5 0 0 1-2.5-2.5v-9a2.5 2.5 0 0 1 2.5-2.5h10.5a.5.5 0 0 0 0-1H6.5z",
   }
 };
@@ -96,11 +96,9 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
       display: 'flex', 
       flexDirection: 'column', 
       height: '100%',
-      // PENAMBAHAN 2: position: 'relative' pada pembungkus utama agar penjepit bisa 'menggantung'
       position: 'relative'
     }}>
       
-      {/* PENAMBAHAN 3: Tombol lampiran yang "menggantung" */}
       {ticket.photoUrl && (
         <button 
           onClick={() => onImageClick(ticket.photoUrl)} 
@@ -131,15 +129,20 @@ function TicketCard({ ticket, picList, refreshData, onImageClick, onTextClick })
       {/* Header */}
       <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${CONFIG.COLORS.border}`, backgroundColor: statusColors.bg, borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
         <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '600', backgroundColor: statusColors.text, color: '#fff' }}>{ticket.status}</span>
+        
+        {/* === [PERUBAHAN] Versi Baru dengan Ikon Platform === */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: statusColors.text, fontSize: '0.85rem' }}>
-          <Icon path={CONFIG.ICONS.group} />
+          {ticket.platform === 'WhatsApp' ? (
+            <FaWhatsapp title="Via WhatsApp" style={{ color: '#25D366', fontSize: '1.1em' }} />
+          ) : (
+            <FaTelegramPlane title="Via Telegram" style={{ color: '#0088cc', fontSize: '1.1em' }} />
+          )}
           <span style={{ fontWeight: '500' }}>{ticket.groupName || 'N/A'}</span>
         </div>
       </div>
 
       {/* Body */}
       <div style={{ padding: '20px', lineHeight: 1.6, flexGrow: 1 }}>
-        {/* DIHAPUS: Blok kode img yang asli sudah dipindahkan ke atas menjadi tombol */}
         <p style={{ margin: 0, fontSize: '1rem', color: CONFIG.COLORS.text.primary, wordBreak: 'break-word' }}>
           {isLongText ? words.slice(0, TRUNCATE_WORDS).join(' ') + '...' : ticket.text}
         </p>

@@ -1,69 +1,65 @@
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() }); // untuk foto balasan
-const Ticket = require('../models/Ticket');
+// file: server/models/Ticket.js
+const mongoose = require('mongoose');
 
-// --- PATCH /api/tickets/:id/set-status ---
-router.patch('/:id/set-status', async (req, res) => {
-  try {
-    const ticket = await Ticket.findById(req.params.id);
-    if (!ticket) return res.status(404).json({ message: 'Ticket tidak ditemukan' });
+const ticketSchema = new mongoose.Schema({
+  // --- Identitas tiket ---
+  ticketCode: { type: String, required: true, unique: true }, // kode unik tiket
+  username: { type: String, required: true }, // nama user pembuat tiket
+  userId: { type: String }, // kalau butuh ID user
+  email: { type: String }, // opsional email user
+  department: { type: String }, // opsional departemen/asal divisi
+  category: { type: String }, // kategori tiket (IT, HR, Finance, dll.)
+  priority: { 
+    type: String, 
+    enum: ['low', 'medium', 'high', 'urgent'], 
+    default: 'medium' 
+  },
 
-    const newStatus = req.body.status.toLowerCase();
-    if (!['diproses', 'on hold', 'Menunggu Approval', 'done'].includes(newStatus)) {
-      return res.status(400).json({ message: 'Status tidak valid' });
+  // --- Isi tiket ---
+  text: { type: String, required: true }, // isi deskripsi masalah
+  attachments: [{ type: String }], // link/file lampiran (opsional)
+
+  // --- Status & PIC ---
+  status: { 
+    type: String, 
+    enum: ['diproses', 'on hold', 'menunggu approval', 'done'], 
+    default: 'diproses' 
+  },
+  pic: { type: String, default: 'Belum Ditentukan' }, // penanggung jawab
+
+  // --- Balasan admin ---
+  adminMessage: { type: String }, // pesan balasan
+  photoUrl: { type: String }, // untuk foto balasan
+  replies: [
+    {
+      balasan: { type: String, required: true },
+      photoUrl: { type: String },
+      repliedAt: { type: Date, default: Date.now }
     }
+  ],
 
-    ticket.status = newStatus;
-    if (newStatus === 'done') ticket.completedAt = new Date();
-    await ticket.save();
+  // --- Multi-platform support (WA & Telegram) ---
+  chatId: { type: String, required: true }, 
+  messageId: { type: String, required: true }, 
+  telegramUserId: { type: String }, 
+  platform: { 
+    type: String, 
+    required: true, 
+    enum: ['Telegram', 'WhatsApp'] 
+  },
 
-    res.json(ticket);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
+  // --- Waktu ---
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+  completedAt: { type: Date }
 });
 
-// --- PATCH /api/tickets/:id/set-pic ---
-router.patch('/:id/set-pic', async (req, res) => {
-  try {
-    const ticket = await Ticket.findById(req.params.id);
-    if (!ticket) return res.status(404).json({ message: 'Ticket tidak ditemukan' });
-
-    ticket.pic = req.body.pic || 'Belum Ditentukan';
-    await ticket.save();
-    res.json(ticket);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
+// Middleware untuk update updatedAt otomatis
+ticketSchema.pre('save', function (next) {
+  this.updatedAt = Date.now();
+  next();
 });
 
-// --- POST /api/tickets/:id/reply ---
-router.post('/:id/reply', upload.single('photo'), async (req, res) => {
-  try {
-    const ticket = await Ticket.findById(req.params.id);
-    if (!ticket) return res.status(404).json({ message: 'Ticket tidak ditemukan' });
+const Ticket = mongoose.model('Ticket', ticketSchema);
 
-    const { balasan } = req.body;
-    if (!balasan) return res.status(400).json({ message: 'Balasan kosong' });
-
-    ticket.adminMessage = balasan;
-
-    if (req.file) {
-      // Simpel: simpan foto sebagai data URL atau path file
-      // Untuk produksi, sebaiknya pakai cloud storage
-      ticket.photoUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    }
-
-    await ticket.save();
-    res.json(ticket);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-module.exports = router;
+module.exports = Ticket;

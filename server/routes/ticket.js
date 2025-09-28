@@ -29,23 +29,34 @@ router.patch('/:id/set-status', authMiddleware, async (req, res) => {
         ticket.completedAt = internalStatus === 'done' ? new Date() : null;
         await ticket.save();
 
-        // Mapping untuk UI
+        // Mapping untuk UI dan notifikasi agar lebih user-friendly
         const mapStatusForUI = (status) => {
             if (!status) return "Diproses";
             const lower = status.toLowerCase();
             if (lower === 'waiting third party') return 'Menunggu Approval';
             if (lower === 'done') return 'Done';
+            // Mengkapitalkan huruf pertama
             return status.charAt(0).toUpperCase() + status.slice(1);
         };
         const displayStatus = mapStatusForUI(ticket.status);
 
-        // Kirim notifikasi Telegram
-        const statusUpdateMessage = `ℹ️ Status tiket *${escapeMarkdownV2(ticket.ticketCode)}* diubah menjadi *${escapeMarkdownV2(displayStatus)}*\\.`;
+        // ===== [PERUBAHAN] LOGIKA NOTIFIKASI MULTI-PLATFORM =====
+        const statusUpdateMessageTele = `ℹ️ Status tiket *${escapeMarkdownV2(ticket.ticketCode)}* diubah menjadi *${escapeMarkdownV2(displayStatus)}*\\.`;
+        const statusUpdateMessageWA = `ℹ️ Status tiket *${ticket.ticketCode}* diubah menjadi *${displayStatus}*.`;
+
         try {
-            await bot.sendMessage(ticket.chatId, statusUpdateMessage, { parse_mode: "MarkdownV2", reply_to_message_id: ticket.messageId });
+            if (ticket.platform === 'WhatsApp') {
+                await waClient.sendMessage(ticket.chatId, statusUpdateMessageWA);
+            } else { // Default ke Telegram
+                await bot.sendMessage(ticket.chatId, statusUpdateMessageTele, { 
+                    parse_mode: "MarkdownV2", 
+                    reply_to_message_id: ticket.messageId 
+                });
+            }
         } catch (err) {
-            console.error(`❌ Gagal kirim notifikasi status ke chatId ${ticket.chatId}:`, err.message);
+            console.error(`❌ Gagal kirim notifikasi status ke platform ${ticket.platform} (chatId ${ticket.chatId}):`, err.message);
         }
+        // =======================================================
 
         res.json({ ...ticket._doc, displayStatus });
 
