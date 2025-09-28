@@ -8,7 +8,7 @@ import {
   Title,
 } from 'chart.js';
 
-// Daftarkan komponen chart.js
+// Register the necessary components for Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, Title);
 
 function CasePieChart({ data }) {
@@ -16,10 +16,10 @@ function CasePieChart({ data }) {
   const labels = Object.keys(safeData);
   const values = Object.values(safeData).map(val => Number(val) || 0);
 
-  // Warna pie otomatis
+  // Automatically generate varied colors for the pie chart slices
   const backgroundColors = labels.map(
     (_, i) =>
-      `hsl(${(i * 360) / labels.length}, 70%, 50%)` // variasi warna HSL
+      `hsl(${(i * 360) / labels.length}, 70%, 50%)` // HSL color variation
   );
 
   const chartData = {

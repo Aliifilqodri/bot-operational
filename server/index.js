@@ -50,7 +50,7 @@ const ticketSchema = new mongoose.Schema({
   },
   adminMessage: { type: String, default: "" },
   pic: { type: String, default: 'BelumDitentukan' },
-  photoUrl: { type: String, default: null },
+  photoUrl: { type: String, default: null }, // Akan diisi placeholder jika ada media WA
   createdAt: { type: Date, default: Date.now },
   completedAt: { type: Date, default: null }
 });
@@ -261,7 +261,7 @@ bot.on('message', async msg => {
   }
 });
 
-// ===== Bot Listener #kendala (WhatsApp) [MENGGUNAKAN msg.reply] - Diperbarui untuk menyimpan ID bersih =====
+// ===== Bot Listener #kendala (WhatsApp) [MENGGUNAKAN msg.reply] - Diperbarui untuk menyimpan ID bersih DAN media placeholder =====
 waClient.on('message', async msg => {
     const text = msg.body;
 
@@ -290,6 +290,15 @@ waClient.on('message', async msg => {
             const extractedText = text.split(/#kendala/i)[1]?.trim() || "(tidak ada deskripsi)";
             const ticketCode = await generateTicketCode();
 
+            // === LOGIKA PENANGANAN MEDIA WHATSAPP BARU ===
+            let photoUrl = null;
+            // Cek apakah pesan memiliki media (foto, dokumen, video, kecuali stiker/gif)
+            if (msg.hasMedia && msg.type !== 'sticker' && msg.type !== 'gif') {
+                // Gunakan placeholder untuk mengaktifkan ikon pin di dashboard
+                photoUrl = "MEDIA_ATTACHED_VIEW_IN_WA"; 
+            }
+            // ===========================================
+
             const chat = await msg.getChat();
             const newTicket = new Ticket({
                 ticketCode,
@@ -300,6 +309,7 @@ waClient.on('message', async msg => {
                 telegramUserId: phoneNumberId, // Menyimpan Nomor Telepon Bersih
                 groupName: chat.isGroup ? chat.name : 'Private Chat',
                 text: extractedText,
+                photoUrl: photoUrl // <-- SIMPAN PLACEHOLDER INI
             });
             await newTicket.save();
 
@@ -395,7 +405,6 @@ waClient.on('message', async msg => {
 
             let statusText = `*🔍 Status Tiket ${ticket.ticketCode}*\n\n` +
                 `*Status:* ${ticket.status}\n` +
-                `*Pelapor (ID):* ${reporterId}\n` + // <-- MENAMPILKAN NOMOR TELEPON
                 `*Kendala:* ${ticket.text}\n` +
                 `*Grup:* ${ticket.groupName}\n` +
                 `*Dilaporkan pada:* ${ticket.createdAt.toLocaleString('id-ID')}\n`;
@@ -627,10 +636,10 @@ app.patch('/api/tickets/:id/set-status', async (req, res) => {
 
                 if (status === 'On Hold') {
                     // Kasus 1: Status diubah menjadi On Hold
-                    const reason = ticket.adminMessage || "Tiket anda sedang dalam Proses";
+                    const reason = ticket.adminMessage || "Tiket anda sedang kami Proses.";
                     notificationText = `⚠️ <b>Tiket ${ticket.ticketCode} Di-'On Hold'</b>
 \nStatus tiket Anda diubah menjadi: <b>${status}</b>.
-\n<b>Alasan dari IT TA:</b> 
+\n<b>Update IT TA:</b> 
 ${reason}
 \nKami akan segera memberikan update jika ada perkembangan.`;
 
@@ -669,10 +678,10 @@ ${reason}
                 let notificationText;
 
                 if (status === 'On Hold') {
-                    const reason = ticket.adminMessage || "Tiket anda sedang dalam Proses";
+                    const reason = ticket.adminMessage || "Tiket anda sedang kami Proses.";
                     notificationText = `⚠️ *Tiket ${ticket.ticketCode} Di-'On Hold'*
 \nStatus tiket Anda diubah menjadi: *${status}*.
-\n*Alasan dari IT TA:*
+\n*Update IT TA:*
 ${reason}
 \nKami akan segera memberikan update jika ada perkembangan.`;
                 } else if (status === 'Done') {
@@ -697,7 +706,7 @@ ${reason}
                 }
 
             } catch (err) {
-                console.error('Gagal kirim notifikasi WhatsApp:', err.message);
+                console.error('❌ Gagal kirim notifikasi WhatsApp:', err.message);
             }
         }
 
@@ -733,20 +742,20 @@ app.get('/api/tickets/export', async (req, res) => {
 
     // === MENGISI DATA BARIS ===
     tickets.forEach(ticket => {
-        let reporterIdDisplay;
-        
-        // Logika untuk menampilkan ID spesifik per platform
-        if (ticket.platform === 'WhatsApp') {
-            // Untuk WhatsApp, tampilkan Nomor HP (sudah disimpan di telegramUserId)
-            reporterIdDisplay = `HP: ${ticket.telegramUserId}`;
-        } else if (ticket.platform === 'Telegram') {
-            // Untuk Telegram, tampilkan Username dan ID
-            reporterIdDisplay = `TG ID: ${ticket.telegramUserId} (User: ${ticket.username})`;
-        } else {
-            reporterIdDisplay = ticket.telegramUserId;
-        }
+        let reporterIdDisplay;
+        
+        // Logika untuk menampilkan ID spesifik per platform
+        if (ticket.platform === 'WhatsApp') {
+            // Untuk WhatsApp, tampilkan Nomor HP (sudah disimpan di telegramUserId)
+            reporterIdDisplay = `HP: ${ticket.telegramUserId}`;
+        } else if (ticket.platform === 'Telegram') {
+            // Untuk Telegram, tampilkan Username dan ID
+            reporterIdDisplay = `TG ID: ${ticket.telegramUserId} (User: ${ticket.username})`;
+        } else {
+            reporterIdDisplay = ticket.telegramUserId;
+        }
 
-        const rowData = {
+        const rowData = {
             ticketCode: ticket.ticketCode,
             platform: ticket.platform,
             status: ticket.status,
