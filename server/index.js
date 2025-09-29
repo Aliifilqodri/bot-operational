@@ -107,14 +107,16 @@ function sendPhoto(chatId, photo, options = {}) {
   return queuedCall(() => bot.sendPhoto(chatId, photo, options));
 }
 
-// ===== INISIALISASI BOT WHATSAPP [Diperbaiki Konfigurasi Puppeteer] =====
+// ===== INISIALISASI BOT WHATSAPP [PATH CHROME DIPERBARUI UNTUK SERVER] =====
 let waClientReady = false;
 
 const waClient = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
     headless: true,
-    executablePath: process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    // PERUBAHAN: Path diubah ke path default Chromium di server Linux.
+    // Tetap bisa di-override dengan variabel CHROME_PATH di file .env jika perlu.
+    executablePath: process.env.CHROME_PATH || '/usr/bin/chromium-browser',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -807,5 +809,5 @@ app.use('/api/auth', authRoutes);
 
 // ===== Jalankan Server =====
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server API berjalan di http://10.204.222.4:${PORT}`);
+  console.log(`🚀 Server berjalan dan siap diakses pada port: ${PORT}`);
 });
