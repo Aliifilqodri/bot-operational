@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ===== Koneksi MongoDB [FIXED: Menghapus opsi deprecated] =====
 mongoose
-  .connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/operationalserver')
+  .connect(process.env.MONGO_URI || 'mongodb://appDashboardOperation:Px12581u82VSk@127.0.0.1:27017/dashboard_operation?authSource=dashboard_operation')
   .then(() => console.log('✅ MongoDB connected!'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
@@ -115,7 +115,6 @@ const waClient = new Client({
   puppeteer: {
     headless: true,
     // PERUBAHAN: Path diubah ke path default Chromium di server Linux.
-    // Tetap bisa di-override dengan variabel CHROME_PATH di file .env jika perlu.
     executablePath: process.env.CHROME_PATH || '/usr/bin/chromium-browser',
     args: [
       '--no-sandbox',
