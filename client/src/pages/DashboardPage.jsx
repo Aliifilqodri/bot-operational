@@ -14,7 +14,7 @@ import CaseChart from '../components/CaseChart';
 import DailyChart from '../components/DailyChart';
 import PlatformChart from '../components/PlatformChart';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3300/api';
 
 // **********************************************
 // * CSS INLINE GAYA MODERN
