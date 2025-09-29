@@ -749,7 +749,7 @@ app.get('/api/tickets/export', async (req, res) => {
       { header: 'Status', key: 'status', width: 15 },
       { header: 'PIC', key: 'pic', width: 15 },
       { header: 'Pelapor (Username/Nama)', key: 'username', width: 25 }, // Diubah untuk lebih umum
-      { header: 'ID Pelapor (Nomor HP/TG ID)', key: 'reporterId', width: 30 }, // Diubah untuk spesifik ID
+      { header: 'ID Pelapor', key: 'reporterId', width: 30 }, // Diubah untuk spesifik ID
       { header: 'Grup/Chat', key: 'groupName', width: 25 },
       { header: 'Deskripsi Kendala', key: 'text', width: 50 },
       { header: 'Tanggal Laporan', key: 'createdAt', width: 25 },
