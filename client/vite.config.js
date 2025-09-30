@@ -1,8 +1,14 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from "vite";
+import process from "process";
 
-export default defineConfig({
-  server: {
-    host: '0.0.0.0',
-    port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
-  },
-});
+export default ({ mode }) => {
+	// Load app-level env vars to node-level env vars.
+	process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
+
+	return defineConfig({
+		server: {
+			host: "0.0.0.0",
+			port: process.env.VITE_PORT ? parseInt(process.env.VITE_PORT) : 5173,
+		},
+	});
+};
