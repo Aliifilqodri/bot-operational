@@ -1,44 +1,86 @@
 // client/src/pages/LoginPage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// --- Perubahan: Mengganti ikon FaHome untuk rumah ---
-import { FaUser, FaLock, FaHome } from "react-icons/fa"; 
+import { FaUser, FaLock, FaHome, FaSignOutAlt, FaDatabase } from "react-icons/fa"; // Tambahkan icon baru
 import api from "../api";
+import toast from "react-hot-toast"; // Import toast untuk notifikasi
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loginMode, setLoginMode] = useState("sso"); // State baru: 'sso' atau 'local'
   const navigate = useNavigate();
+
+  const isSSOMode = loginMode === "sso";
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    // Tentukan endpoint berdasarkan mode login
+    const endpoint = isSSOMode ? "/auth/sso-login" : "/auth/local-login";
+    const loginType = isSSOMode ? "SSO" : "Lokal";
+
     try {
-      const res = await api.post("/auth/login", { username, password });
+      const res = await api.post(endpoint, { username, password });
+
       localStorage.setItem("token", res.data.token);
+      sessionStorage.setItem('justLoggedIn', 'true');
+      
+      toast.success(`Login ${loginType} berhasil!`);
       navigate("/dashboard");
+
     } catch (err) {
-      setError(err.response?.data?.message || "Terjadi kesalahan");
+      const errorMessage = err.response?.data?.message || "Terjadi kesalahan pada server";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // --- DIHAPUS: useEffect untuk canvas partikel ---
-  // Kode canvas partikel dihapus untuk tampilan formal
-  // useEffect(() => { /* ... kode partikel ... */ }, []);
+  const toggleLoginMode = () => {
+    setLoginMode(isSSOMode ? "local" : "sso");
+    setUsername("");
+    setPassword("");
+    setError("");
+  };
 
   return (
-    <div className="login-wrapper-formal"> {/* Mengubah nama kelas untuk styling baru */}
-      {/* --- DIHAPUS: canvas elemen --- */}
-      {/* <canvas id="neonCanvas" className="neon-canvas"></canvas> */}
-
-      <div className="login-card-formal"> {/* Mengubah nama kelas untuk styling baru */}
-        {/* --- PENAMBAHAN: Ikon Rumah & Judul Dashboard --- */}
+    <div className="login-wrapper-formal">
+      <div className="login-card-formal">
         <div className="text-center mb-4">
-          <FaHome className="login-home-icon" /> {/* Ikon rumah */}
-          <h1 className="login-app-title">Dashboard Operational</h1> {/* Judul aplikasi */}
+          <FaHome className="login-home-icon" />
+          <h1 className="login-app-title">Dashboard Operational</h1>
         </div>
 
-        <h2 className="login-title-formal">Masuk ke Sistem</h2> {/* Judul login yang lebih formal */}
+        <h2 className="login-title-formal">
+          Masuk ({isSSOMode ? "SSO Mode" : "Local Mode"})
+        </h2>
+        
+        {/* Tombol Toggle Login Mode */}
+        <div className="text-center mb-4">
+          <button 
+            type="button" 
+            onClick={toggleLoginMode} 
+            className="toggle-mode-btn"
+            disabled={loading}
+          >
+            {isSSOMode ? (
+              <>
+                <FaDatabase className="mr-2" /> Beralih ke Login Lokal
+              </>
+            ) : (
+              <>
+                <FaSignOutAlt className="mr-2" /> Beralih ke Login SSO
+              </>
+            )}
+          </button>
+        </div>
+
         <form onSubmit={handleLogin}>
           <div className="input-group-formal">
             <FaUser className="icon-formal" />
@@ -48,6 +90,7 @@ const LoginPage = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
@@ -59,22 +102,24 @@ const LoginPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
-          <button type="submit" className="login-btn-formal">
-            Masuk
+          <button type="submit" className="login-btn-formal" disabled={loading}>
+            {loading ? 'Memproses...' : (isSSOMode ? 'Masuk dengan SSO' : 'Masuk Lokal')}
           </button>
-          {error && <div className="error-box-formal">{error}</div>}
+          
+          {/* Opsional: Tampilkan error box */}
+          {/* {error && <div className="error-box-formal">{error}</div>} */}
         </form>
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
         * {
-          font-family: 'Poppins', sans-serif; /* Menggunakan Poppins atau Roboto untuk kesan formal */
+          font-family: 'Poppins', sans-serif;
         }
 
         .login-wrapper-formal {
@@ -85,40 +130,39 @@ const LoginPage = () => {
           justify-content: center;
           align-items: center;
           overflow: hidden;
-          /* Latar belakang formal dengan gradien abu-abu gelap */
           background: linear-gradient(135deg, #2c3e50, #212529); 
         }
 
         .login-card-formal {
           position: relative;
           z-index: 1;
-          background: #ffffff; /* Kartu putih */
+          background: #ffffff;
           border-radius: 12px;
           padding: 40px 35px;
           width: 400px;
-          max-width: 90%; /* Responsif */
+          max-width: 90%;
           text-align: center;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); /* Bayangan lebih gelap dan formal */
-          border: 1px solid #e0e0e0; /* Border halus */
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+          border: 1px solid #e0e0e0;
           animation: fadeInUpFormal 0.8s ease forwards;
         }
 
         .login-home-icon {
-          font-size: 3.5rem; /* Ukuran ikon rumah */
-          color: #dc3545; /* Warna merah */
+          font-size: 3.5rem;
+          color: #dc3545;
           margin-bottom: 10px;
         }
 
         .login-app-title {
-          color: #343a40; /* Warna teks gelap */
+          color: #343a40;
           font-weight: 700;
           font-size: 1.8rem;
           margin-bottom: 25px;
         }
 
         .login-title-formal {
-          color: #495057; /* Warna judul login */
-          margin-bottom: 28px;
+          color: #495057;
+          margin-bottom: 20px;
           font-weight: 600;
           font-size: 1.4rem;
         }
@@ -133,17 +177,17 @@ const LoginPage = () => {
           top: 50%;
           left: 15px;
           transform: translateY(-50%);
-          color: #6c757d; /* Warna ikon abu-abu */
+          color: #6c757d;
           font-size: 18px;
         }
 
         .input-group-formal input {
           width: 100%;
-          padding: 12px 15px 12px 50px; /* Padding kiri lebih besar untuk ikon */
+          padding: 12px 15px 12px 50px;
           border-radius: 8px;
-          border: 1px solid #ced4da; /* Border input default */
+          border: 1px solid #ced4da;
           outline: none;
-          background: #f8f9fa; /* Latar belakang input sedikit abu-abu */
+          background: #f8f9fa;
           color: #343a40;
           font-size: 16px;
           transition: 0.3s ease;
@@ -154,9 +198,39 @@ const LoginPage = () => {
         }
 
         .input-group-formal input:focus {
-          border-color: #dc3545; /* Border merah saat fokus */
-          box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25); /* Glow merah saat fokus */
+          border-color: #dc3545;
+          box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
           background: #fff;
+        }
+        
+        /* Tombol Toggle Mode */
+        .toggle-mode-btn {
+          background: #f0f0f0;
+          color: #555;
+          border: 1px solid #ccc;
+          padding: 8px 15px;
+          border-radius: 5px;
+          font-size: 14px;
+          cursor: pointer;
+          margin-bottom: 15px;
+          transition: background 0.3s, color 0.3s;
+          display: inline-flex;
+          align-items: center;
+          font-weight: 500;
+        }
+        
+        .toggle-mode-btn:hover:not(:disabled) {
+          background: #e9ecef;
+          color: #333;
+        }
+        
+        .toggle-mode-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.7;
+        }
+        
+        .mr-2 {
+            margin-right: 8px;
         }
 
         .login-btn-formal {
@@ -164,28 +238,37 @@ const LoginPage = () => {
           padding: 13px;
           border: none;
           border-radius: 8px;
-          background: linear-gradient(90deg, #dc3545, #a71d2a); /* Gradien merah */
+          background: linear-gradient(90deg, #dc3545, #a71d2a);
           color: #fff;
           font-weight: 600;
           font-size: 17px;
           cursor: pointer;
           transition: 0.3s ease;
           box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+          display: flex;
+          justify-content: center;
+          align-items: center;
         }
 
-        .login-btn-formal:hover {
+        .login-btn-formal:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
-          background: linear-gradient(90deg, #a71d2a, #dc3545); /* Efek hover gradien terbalik */
+          background: linear-gradient(90deg, #a71d2a, #dc3545);
+        }
+
+        .login-btn-formal:disabled {
+          background: #6c757d;
+          cursor: not-allowed;
+          box-shadow: none;
         }
 
         .error-box-formal {
           margin-top: 20px;
           padding: 12px;
           border-radius: 8px;
-          background: #f8d7da; /* Latar belakang error merah muda */
+          background: #f8d7da;
           border: 1px solid #f5c6cb;
-          color: #721c24; /* Teks error merah gelap */
+          color: #721c24;
           font-size: 14px;
           font-weight: 500;
         }
