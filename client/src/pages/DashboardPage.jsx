@@ -17,13 +17,12 @@ import CaseChart from '../components/CaseChart';
 import DailyChart from '../components/DailyChart';
 import PlatformChart from '../components/PlatformChart';
 
-
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://10.204.222.4:3300/api';
-
-// This line correctly derives the base URL for Socket.IO, so no changes are needed here.
-const SOCKET_SERVER_URL = BACKEND_URL.replace(/\/api\/?$/, '');
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 
+// ====================================================================
+// ===== BAGIAN UI: Komponen-komponen kecil untuk tampilan
+// ====================================================================
 
 // Komponen Header Dasbor
 const DashboardHeader = ({ username, handleLogout }) => {

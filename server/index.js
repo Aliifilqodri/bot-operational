@@ -1123,6 +1123,6 @@ io.on('connection', (socket) => {
 });
 
 // Gunakan 'server.listen' alih-alih 'app.listen' untuk menjalankan server HTTP dan WebSocket
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server API berjalan di http://10.204.222.4:${PORT}`);
-}); 
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server API & WebSocket berjalan di http://localhost:${PORT}`);
+});
